@@ -17,8 +17,8 @@ Estado del repo que se evoluciona: existen `lib/main.dart`, `lib/app.dart`, `lib
 
 ### Incluye
 
-- Motor en **Dart puro** en `lib/features/calculator/domain/engine/`: lexer, parser recursivo descendente, AST, evaluador, precedencia, paréntesis, asociatividad a la derecha de `^`, unario, porcentaje, división por cero y errores con código estable. **Cero imports de `package:flutter/*`**.
-- Capacidades con contrato común en `lib/features/calculator/domain/capabilities/`: básicas y científicas (potencias, raíces, logaritmos, trigonometría, factorial y constantes).
+- Motor en **Dart puro** en `lib/features/calculator/domain/engine/`: lexer, parser recursivo descendente, AST, evaluador, precedencia, paréntesis, asociatividad a la derecha de `^`, unario, **porcentaje simple y contextual**, división por cero y errores con código estable. **Cero imports de `package:flutter/*`**.
+- Capacidades con contrato común en `lib/features/calculator/domain/capabilities/`: básicas y científicas (potencias, raíces, logaritmos, trigonometría directa e inversa, recíproco, cuadrado, factorial y constantes).
 - Perfiles base como datos estáticos en `lib/features/calculator/domain/profiles/`: normal y científico (el generador llega en la fase siguiente).
 - UI MVVM con Provider: display LCD ámbar sobre fondo oscuro con siete segmentos, teclado reutilizable en `lib/core/widgets/`, toggle normal/científico y toggle DEG/RAD.
 - i18n desde el MVP: `lib/l10n/app_es_PE.arb`, `app_en.arb`, `app_pt_BR.arb` con las **mismas claves**; resolvedor de locale y regla numérica en `lib/core/i18n/`; decimal según locale; el parser acepta coma y punto; textos y nombres salen de ARB, nunca de cadenas sueltas.
@@ -103,7 +103,7 @@ Convención para cada tarea: **Archivo principal**, **Criterio de aceptación** 
 #### T01 — Test rojo del contrato del motor
 
 - **Archivo principal:** `test/unit/calculator/parser_test.dart` (nuevo).
-- **Criterio de aceptación:** el archivo existe y falla en rojo porque `lexer.dart`, `parser.dart`, `evaluator.dart`, capacidades y perfiles aún no existen; contiene 12 casos concretos de precedencia, paréntesis, asociatividad, DEG/RAD, errores y rechazo de funciones científicas en modo normal.
+- **Criterio de aceptación:** el archivo existe y falla en rojo porque `lexer.dart`, `parser.dart`, `evaluator.dart`, capacidades y perfiles aún no existen; contiene 14 casos concretos de precedencia, paréntesis, asociatividad, DEG/RAD, porcentaje contextual, funciones inversas, recíproco, cuadrado, errores y rechazo de capacidades no soportadas en modo normal.
 - **Código literal:**
 
 ```dart
@@ -163,6 +163,13 @@ void main() {
       expect(engine.evaluate('50%', normal), 0.5);
     });
 
+    test('porcentaje contextual a la derecha de +, -, * y /', () {
+      expect(engine.evaluate('50 + 10%', normal), 55);
+      expect(engine.evaluate('50 - 10%', normal), 45);
+      expect(engine.evaluate('100 * 10%', normal), 10);
+      expect(engine.evaluate('100 / 10%', normal), 1000);
+    });
+
     test('división por cero usa código estable', () {
       expect(
         () => engine.evaluate('1 / 0', normal),
@@ -190,6 +197,21 @@ void main() {
 
     test('logaritmo decimal: log(100) == 2', () {
       expect(engine.evaluate('log(100)', scientific), closeTo(2, 1e-12));
+    });
+
+    test('inversas, recíproco y cuadrado', () {
+      expect(engine.evaluate('asin(1)', scientific), closeTo(90, 1e-12));
+      expect(
+        engine.evaluate('asin(1)', scientific,
+            angleMode: AngleMode.radians),
+        closeTo(1.5707963267948966, 1e-12),
+      );
+      expect(engine.evaluate('inv(4)', scientific), 0.25);
+      expect(engine.evaluate('sqr(3)', scientific), 9);
+      expect(
+        () => engine.evaluate('asin(2)', scientific),
+        throwsA(isA<CalculatorException>()),
+      );
     });
 
     test('factorial: 5! == 120', () {
@@ -548,7 +570,7 @@ class Parser {
 #### T05 — Evaluador y división por cero
 
 - **Archivo principal:** `lib/features/calculator/domain/engine/evaluator.dart` (nuevo).
-- **Criterio de aceptación:** evalúa los 7 nodos del AST; `1/0` lanza `divisionByZero`; `math.pow` con dominio inválido lanza `invalidDomain`; DEG/RAD se resuelve en la capacidad, nunca aquí; operadores, funciones y constantes se validan contra `CalculatorCapability` antes de ejecutarse.
+- **Criterio de aceptación:** evalúa los 7 nodos del AST; un `PercentNode` a la derecha de `+ - * /` es relativo al operando izquierdo (`50 + 10% == 55`); `1/0` lanza `divisionByZero`; `math.pow` con dominio inválido lanza `invalidDomain`; DEG/RAD se resuelve en la capacidad, nunca aquí; operadores, funciones y constantes se validan contra `CalculatorCapability` antes de ejecutarse.
 - **Código literal:**
 
 ```dart
@@ -594,6 +616,19 @@ class Evaluator {
   double _binary(String operator, ExprNode left, ExprNode right) {
     if (!_capability.supportsOperator(operator)) {
       throw const CalculatorException('unsupportedOperator');
+    }
+    if (right is PercentNode) {
+      final double base = evaluate(left);
+      final double rate = evaluate(right.operand) / 100;
+      return switch (operator) {
+        '+' => base + base * rate,
+        '-' => base - base * rate,
+        '*' => base * rate,
+        '/' => rate == 0
+            ? throw const CalculatorException('divisionByZero')
+            : base / rate,
+        _ => throw const CalculatorException('unsupportedOperator'),
+      };
     }
     final double a = evaluate(left);
     final double b = evaluate(right);
@@ -691,7 +726,7 @@ class BasicCapability implements CalculatorCapability {
 #### T08 — Capacidad científica
 
 - **Archivo principal:** `lib/features/calculator/domain/capabilities/scientific_capability.dart` (nuevo).
-- **Criterio de aceptación:** `sin/cos/tan` aplican conversión DEG→RAD; `ln/log/sqrt` validan dominio; `fact` solo acepta enteros 0..170; constantes `pi` y `e`; sin Flutter.
+- **Criterio de aceptación:** `sin/cos/tan` convierten DEG→RAD y `asin/acos/atan` convierten RAD→DEG; `ln/log/sqrt` validan dominio; `inv` rechaza cero y `sqr` eleva al cuadrado; `fact` solo acepta enteros 0..170; constantes `pi` y `e`; sin Flutter.
 - **Código literal:**
 
 ```dart
@@ -713,9 +748,14 @@ class ScientificCapability implements CalculatorCapability {
         'sin',
         'cos',
         'tan',
+        'asin',
+        'acos',
+        'atan',
         'ln',
         'log',
         'sqrt',
+        'inv',
+        'sqr',
       };
 
   @override
@@ -732,13 +772,18 @@ class ScientificCapability implements CalculatorCapability {
 
   @override
   double callFunction(String name, double value, AngleMode mode) {
-    final double radians = mode == AngleMode.radians
-        ? value
-        : value * math.pi / 180;
+    final double radians = _toRadians(value, mode);
     return switch (name.toLowerCase()) {
       'sin' => math.sin(radians),
       'cos' => math.cos(radians),
       'tan' => math.tan(radians),
+      'asin' => value < -1 || value > 1
+          ? throw const CalculatorException('invalidDomain')
+          : _fromRadians(math.asin(value), mode),
+      'acos' => value < -1 || value > 1
+          ? throw const CalculatorException('invalidDomain')
+          : _fromRadians(math.acos(value), mode),
+      'atan' => _fromRadians(math.atan(value), mode),
       'ln' => value <= 0
           ? throw const CalculatorException('invalidDomain')
           : math.log(value),
@@ -748,9 +793,19 @@ class ScientificCapability implements CalculatorCapability {
       'sqrt' => value < 0
           ? throw const CalculatorException('invalidDomain')
           : math.sqrt(value),
+      'inv' => value == 0
+          ? throw const CalculatorException('divisionByZero')
+          : 1 / value,
+      'sqr' => value * value,
       _ => throw const CalculatorException('unsupportedFunction'),
     };
   }
+
+  double _toRadians(double value, AngleMode mode) =>
+      mode == AngleMode.radians ? value : value * math.pi / 180;
+
+  double _fromRadians(double value, AngleMode mode) =>
+      mode == AngleMode.radians ? value : value * 180 / math.pi;
 
   @override
   double factorial(double value) {
@@ -808,7 +863,7 @@ class CalculatorProfile {
 #### T10 — Catálogo estático de perfiles
 
 - **Archivo principal:** `lib/features/calculator/domain/profiles/profiles.dart` (nuevo).
-- **Criterio de aceptación:** `CalculatorProfiles.normal` y `CalculatorProfiles.scientific` son `const`; el científico expone teclas `sin(`, `cos(`, `tan(`, `log(`, `ln(`, `sqrt(`, `^`, `pi`, `e`, `!`, `(`, `)`.
+- **Criterio de aceptación:** `CalculatorProfiles.normal` y `CalculatorProfiles.scientific` son `const`; el científico expone teclas `sin(`, `cos(`, `tan(`, `asin(`, `acos(`, `atan(`, `1/x`, `x²`, `log(`, `ln(`, `sqrt(`, `^`, `pi`, `e`, `!`, `(`, `)`.
 - **Código literal:**
 
 ```dart
@@ -843,6 +898,7 @@ class CalculatorProfiles {
     decimalDigits: 10,
     keyRows: <List<String>>[
       <String>['sin(', 'cos(', 'tan(', '(', ')'],
+      <String>['asin(', 'acos(', 'atan(', '1/x', 'x²'],
       <String>['ln(', 'log(', 'sqrt(', '^', '!'],
       <String>['pi', 'e', '%', 'C', '⌫'],
       <String>['7', '8', '9', '/', '*'],
@@ -996,7 +1052,7 @@ String formatNumber(
 #### T14 — ARB con claves idénticas y generación
 
 - **Archivos principales:** `lib/l10n/app_en.arb`, `lib/l10n/app_es_PE.arb`, `lib/l10n/app_pt_BR.arb` y `l10n.yaml` (nuevos).
-- **Criterio de aceptación:** los tres ARB tienen exactamente las mismas 35 claves; `flutter gen-l10n` termina sin errores y genera `AppLocalizations` con delegados para `en`, `es_PE` y `pt_BR`.
+- **Criterio de aceptación:** los tres ARB tienen exactamente las mismas 40 claves; `flutter gen-l10n` termina sin errores y genera `AppLocalizations` con delegados para `en`, `es_PE` y `pt_BR`.
 - **Código literal (`l10n.yaml`):**
 
 ```yaml
@@ -1037,6 +1093,11 @@ preferred-supported-locales: [es_PE, en, pt_BR]
   "keyE": "e",
   "keyLeftParen": "(",
   "keyRightParen": ")",
+  "keyAsin": "asin",
+  "keyAcos": "acos",
+  "keyAtan": "atan",
+  "keyReciprocal": "1/x",
+  "keySquare": "x²",
   "errorDivisionByZero": "Division by zero",
   "errorInvalidExpression": "Invalid expression",
   "errorInvalidDomain": "Invalid domain",
@@ -1079,6 +1140,11 @@ preferred-supported-locales: [es_PE, en, pt_BR]
   "keyE": "e",
   "keyLeftParen": "(",
   "keyRightParen": ")",
+  "keyAsin": "sen⁻¹",
+  "keyAcos": "cos⁻¹",
+  "keyAtan": "tan⁻¹",
+  "keyReciprocal": "1/x",
+  "keySquare": "x²",
   "errorDivisionByZero": "División por cero",
   "errorInvalidExpression": "Expresión no válida",
   "errorInvalidDomain": "Dominio no válido",
@@ -1121,6 +1187,11 @@ preferred-supported-locales: [es_PE, en, pt_BR]
   "keyE": "e",
   "keyLeftParen": "(",
   "keyRightParen": ")",
+  "keyAsin": "sen⁻¹",
+  "keyAcos": "cos⁻¹",
+  "keyAtan": "tan⁻¹",
+  "keyReciprocal": "1/x",
+  "keySquare": "x²",
   "errorDivisionByZero": "Divisão por zero",
   "errorInvalidExpression": "Expressão inválida",
   "errorInvalidDomain": "Domínio inválido",
@@ -1141,7 +1212,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('los tres ARB tienen exactamente las mismas 35 claves', () {
+  test('los tres ARB tienen exactamente las mismas 40 claves', () {
     const List<String> files = <String>[
       'app_en.arb',
       'app_es_PE.arb',
@@ -1156,7 +1227,7 @@ void main() {
     for (final Set<String> keys in keySets) {
       expect(keys, keySets.first);
     }
-    expect(keySets.first, hasLength(35));
+    expect(keySets.first, hasLength(40));
   });
 }
 ```
@@ -1881,6 +1952,8 @@ class CalculatorViewModel extends ChangeNotifier {
       'x^y' => '^',
       '√' => 'sqrt(',
       'n!' => '!',
+      '1/x' => 'inv(',
+      'x²' => 'sqr(',
       _ => key,
     };
   }
@@ -2119,6 +2192,11 @@ class _CalculatorPageState extends State<CalculatorPage> {
       'e': l10n.keyE,
       '(': l10n.keyLeftParen,
       ')': l10n.keyRightParen,
+      'asin(': l10n.keyAsin,
+      'acos(': l10n.keyAcos,
+      'atan(': l10n.keyAtan,
+      '1/x': l10n.keyReciprocal,
+      'x²': l10n.keySquare,
     };
   }
 
@@ -2373,11 +2451,12 @@ flutter analyze
 flutter test
 ```
 
-Criterio de salida: `flutter analyze` sin issues y `flutter test` completamente en verde, incluidos `test/unit/calculator/parser_test.dart`, `test/unit/calculator/history_store_test.dart`, `test/unit/calculator/local_counters_test.dart`, `test/unit/calculator/calculator_view_model_test.dart`, `test/unit/calculator/engine_regression_test.dart`, `test/unit/i18n/number_formatting_test.dart`, `test/widget/calculator_page_test.dart` y `test/widget/app_test.dart`. Además, `flutter gen-l10n` debe regenerar sin errores y `flutter test test/unit/i18n/arb_keys_test.dart` debe confirmar las 35 claves compartidas.
+Criterio de salida: `flutter analyze` sin issues y `flutter test` completamente en verde, incluidos `test/unit/calculator/parser_test.dart`, `test/unit/calculator/history_store_test.dart`, `test/unit/calculator/local_counters_test.dart`, `test/unit/calculator/calculator_view_model_test.dart`, `test/unit/calculator/engine_regression_test.dart`, `test/unit/i18n/number_formatting_test.dart`, `test/widget/calculator_page_test.dart` y `test/widget/app_test.dart`. Además, `flutter gen-l10n` debe regenerar sin errores y `flutter test test/unit/i18n/arb_keys_test.dart` debe confirmar las 40 claves compartidas.
 
 ## Riesgos
 
-- **Precedencia DEG/RAD:** la conversión vive solo en `ScientificCapability.callFunction`; si se repite en el evaluador o en la UI, `sin(30)` y `sin(pi/2)` divergen. Mitigación: tests T01 con ambos modos y revisión de que la UI nunca pase factores de conversión.
+- **Precedencia DEG/RAD:** la conversión vive solo en `ScientificCapability.callFunction`; si se repite en el evaluador o en la UI, `sin(30)` y `sin(pi/2)` divergen. Mitigación: tests T01 con ambos modos y revisión de que la UI nunca pase factores de conversión; las inversas usan la conversión contraria en `_fromRadians`.
+- **Porcentaje contextual:** `50 + 10%` debe ser `55`, no `50.1`. Mitigación: `Evaluator._binary` detecta `PercentNode` a la derecha y aplica el tanto por ciento sobre el operando izquierdo; el caso aislado `50%` sigue siendo `0.5`.
 - **Coma flotante:** resultados como `0.1 + 0.2` y raíces/potencias pueden acumular error. Mitigación: `closeTo(1e-12)` en tests, recorte controlado de decimales en `formatNumber` y `nonFiniteResult` para desbordamientos; no introducir `Decimal` en este MVP.
 - **División por cero:** debe ser `CalculatorException('divisionByZero')`, nunca `Infinity` ni un crash. Mitigación: test T01, mapeo en `error_label.dart` y verificación de que el display muestra el texto localizado.
 - **Claves ARB desincronizadas:** una clave ausente en `es_PE` o `pt_BR` rompe la generación o deja texto sin traducir. Mitigación: comando de comparación de T14, uso exclusivo de `AppLocalizations` en UI y `AppStrings` reducido a claves.
