@@ -1463,34 +1463,65 @@ class InMemoryHistoryStore implements HistoryStore {
 
 #### T19 — Persistencia local sin red
 
-- **Archivo principal:** `lib/features/calculator/data/local/shared_preferences_history_store.dart` (y `pubspec.yaml` solo para añadir la dependencia).
-- **Criterio de aceptación:** `flutter pub add shared_preferences` ejecutado; la store lee/escribe la clave `calculator.history.v1`, aplica el mismo tope 50 y no contiene ninguna llamada HTTP.
+- **Archivos principales:** `lib/platform/preferences/key_value_store.dart` (nuevo, interfaz), `lib/platform/preferences/shared_preferences_key_value_store.dart` (nuevo, único import del plugin), `lib/features/calculator/data/local/shared_preferences_history_store.dart` (nuevo) y `pubspec.yaml` (solo `flutter pub add shared_preferences`).
+- **Criterio de aceptación:** `flutter pub add shared_preferences` ejecutado; ningún archivo fuera de `lib/platform/` importa `package:shared_preferences/...`; la store lee/escribe la clave `calculator.history.v1` a través de `KeyValueStore`, aplica el mismo tope 50 y no contiene llamadas HTTP. El cableado del adaptador concreto se hará en la capa de app durante el Slice 4.
 - **Comando previo:** `flutter pub add shared_preferences`.
-- **Código literal:**
+- **Código literal (`lib/platform/preferences/key_value_store.dart`):**
+
+```dart
+abstract interface class KeyValueStore {
+  Future<String?> getString(String key);
+  Future<void> setString(String key, String value);
+}
+```
+
+- **Código literal (`lib/platform/preferences/shared_preferences_key_value_store.dart`):**
+
+```dart
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'key_value_store.dart';
+
+class SharedPreferencesKeyValueStore implements KeyValueStore {
+  SharedPreferencesKeyValueStore(this._preferences);
+
+  factory SharedPreferencesKeyValueStore.create() {
+    return SharedPreferencesKeyValueStore(SharedPreferences.getInstance());
+  }
+
+  final Future<SharedPreferences> _preferences;
+
+  @override
+  Future<String?> getString(String key) async =>
+      (await _preferences).getString(key);
+
+  @override
+  Future<void> setString(String key, String value) async {
+    await (await _preferences).setString(key, value);
+  }
+}
+```
+
+- **Código literal (`lib/features/calculator/data/local/shared_preferences_history_store.dart`):**
 
 ```dart
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
-
+import '../../../../platform/preferences/key_value_store.dart';
 import '../models/history_entry.dart';
 import 'history_store.dart';
 import 'in_memory_history_store.dart';
 
 class SharedPreferencesHistoryStore implements HistoryStore {
-  SharedPreferencesHistoryStore(this._preferences);
-
-  factory SharedPreferencesHistoryStore.create() {
-    return SharedPreferencesHistoryStore(SharedPreferences.getInstance());
-  }
+  SharedPreferencesHistoryStore(this._store);
 
   static const String storageKey = 'calculator.history.v1';
 
-  final Future<SharedPreferences> _preferences;
+  final KeyValueStore _store;
 
   @override
   Future<List<HistoryEntry>> load() async {
-    final String? raw = (await _preferences).getString(storageKey);
+    final String? raw = await _store.getString(storageKey);
     if (raw == null || raw.isEmpty) {
       return <HistoryEntry>[];
     }
@@ -1511,13 +1542,12 @@ class SharedPreferencesHistoryStore implements HistoryStore {
         .take(InMemoryHistoryStore.maxEntries)
         .map((HistoryEntry item) => item.toJson())
         .toList(growable: false);
-    await (await _preferences)
-        .setString(storageKey, jsonEncode(serializable));
+    await _store.setString(storageKey, jsonEncode(serializable));
   }
 }
 ```
 
-- **Verificar:** `flutter pub get && flutter analyze lib/features/calculator/data/local`.
+- **Verificar:** `flutter pub get && flutter analyze lib/features/calculator/data/local lib/platform/preferences` y `grep -R "package:shared_preferences" lib --exclude-dir=platform` sin coincidencias.
 
 #### T20 — Test rojo de contadores locales
 
@@ -1570,7 +1600,7 @@ class LocalCounters {
 
 - **Verificar:** `flutter test test/unit/calculator/local_counters_test.dart` (verde).
 
-### Slice 4 — Widgets reutilizables y MVVM (T22–T29)
+### Slice 4 — Widgets reutilizables y MVVM (T22–T30)
 
 #### T22 — Display LCD de siete segmentos
 
