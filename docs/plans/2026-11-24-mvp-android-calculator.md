@@ -989,6 +989,14 @@ void main() {
           separator: DecimalSeparator.comma, maxFractionDigits: 3),
       '0,333',
     );
+    expect(
+      formatNumber(100, separator: DecimalSeparator.dot, maxFractionDigits: 0),
+      '100',
+    );
+    expect(
+      formatNumber(0, separator: DecimalSeparator.comma, maxFractionDigits: 0),
+      '0',
+    );
   });
 }
 ```
@@ -998,7 +1006,7 @@ void main() {
 #### T13 — Regla numérica por locale
 
 - **Archivo principal:** `lib/core/i18n/number_formatting.dart` (nuevo).
-- **Criterio de aceptación:** Dart puro (solo `dart:core`), sin imports de Flutter; los 3 tests del slice pasan; el parser ya acepta coma y punto, así que la salida con coma es reentrante.
+- **Criterio de aceptación:** Dart puro (solo `dart:core`), sin imports de Flutter; los 3 tests del slice pasan; con `maxFractionDigits: 0` no se recortan ceros de la parte entera; el parser ya acepta coma y punto, así que la salida con coma es reentrante.
 - **Código literal:**
 
 ```dart
@@ -1028,9 +1036,11 @@ String formatNumber(
   }
   final int digits = maxFractionDigits.clamp(0, 12);
   final String fixed = value.toStringAsFixed(digits);
-  final String trimmed = fixed
-      .replaceFirst(RegExp(r'0+$'), '')
-      .replaceFirst(RegExp(r'\.$'), '');
+  final String trimmed = digits == 0
+      ? fixed
+      : fixed
+          .replaceFirst(RegExp(r'0+$'), '')
+          .replaceFirst(RegExp(r'\.$'), '');
   final bool negative = trimmed.startsWith('-');
   final String unsigned = negative ? trimmed.substring(1) : trimmed;
   final List<String> parts = unsigned.split('.');
@@ -1051,8 +1061,8 @@ String formatNumber(
 
 #### T14 — ARB con claves idénticas y generación
 
-- **Archivos principales:** `lib/l10n/app_en.arb`, `lib/l10n/app_es_PE.arb`, `lib/l10n/app_pt_BR.arb`, `lib/l10n/app_es.arb` y `lib/l10n/app_pt.arb` (nuevos; los dos últimos son fallback técnico), `l10n.yaml` (nuevo) y el Dart generado en `lib/l10n/app_localizations*.dart` (nuevo, commiteado); `pubspec.yaml` se evoluciona con `flutter: generate: true`.
-- **Criterio de aceptación:** los cinco ARB tienen exactamente las mismas 40 claves; `app_es.arb` replica las claves de `app_es_PE.arb` y `app_pt.arb` las de `app_pt_BR.arb`, pero `LocaleResolver` sigue ofreciendo solo `es_PE`, `en` y `pt_BR` en el lote 1. `flutter gen-l10n` y `flutter pub get` terminan sin errores con Flutter 3.44 y generan `AppLocalizations` en `lib/l10n/`; se importa como `package:retro_calculator/l10n/app_localizations.dart`.
+- **Archivos principales:** `lib/l10n/app_en.arb`, `lib/l10n/app_es_PE.arb`, `lib/l10n/app_pt_BR.arb`, `lib/l10n/app_es.arb` y `lib/l10n/app_pt.arb` (nuevos; los dos últimos son fallback técnico), `l10n.yaml` (nuevo) y el Dart generado en `lib/l10n/app_localizations*.dart` (nuevo, commiteado); `pubspec.yaml` se evoluciona con `flutter: generate: true` y con las dependencias que el Dart generado exige: `flutter_localizations` (SDK) e `intl`.
+- **Criterio de aceptación:** los cinco ARB tienen exactamente las mismas 40 claves; `app_es.arb` replica las claves de `app_es_PE.arb` y `app_pt.arb` las de `app_pt_BR.arb`, pero `LocaleResolver` sigue ofreciendo solo `es_PE`, `en` y `pt_BR` en el lote 1. `flutter gen-l10n` y `flutter pub get` terminan sin errores con Flutter 3.44; `AppLocalizations` se genera en `lib/l10n/`, se importa como `package:retro_calculator/l10n/app_localizations.dart` y `flutter analyze` da 0 issues porque `flutter_localizations` e `intl` están declarados.
 - **Código literal (`l10n.yaml`):**
 
 ```yaml
@@ -1062,13 +1072,22 @@ output-localization-file: app_localizations.dart
 preferred-supported-locales: [es_PE, en, pt_BR]
 ```
 
-- **Código literal (`pubspec.yaml`, sección `flutter`):**
+- **Código literal (`pubspec.yaml`):**
 
 ```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+
 flutter:
   generate: true
   uses-material-design: true
 ```
+
+`flutter_localizations` e `intl` son dependencias del Dart generado en Flutter 3.44: sin ellas `flutter analyze` reporta 12 errores de URI y símbolos no definidos.
 
 - **Código literal (`lib/l10n/app_en.arb`):**
 
