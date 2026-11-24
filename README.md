@@ -59,7 +59,7 @@ git config core.hooksPath .opencode/hooks
 
 ## Flujo de trabajo
 
-Ver [`flujo-trabajo-retrocalculator.md`](C:/Users/qty94/.opencode/plan/flujo-trabajo-retrocalculator.md) y [`AGENTS.md`](./AGENTS.md).
+Ver el flujo acordado en `C:/Users/qty94/.opencode/plan/flujo-trabajo-retrocalculator.md` y [`AGENTS.md`](./AGENTS.md).
 
 Resumen:
 
@@ -80,4 +80,5 @@ Convención de commits: `type(scope): summary` en inglés, cuerpo en español.
 - [Arquitectura](./docs/architecture.md)
 - [ADR-0001: skins temporales y anuncios](./docs/adr/0001-skins-temporales-y-anuncios.md)
 - [ADR-0002: orden de plataformas](./docs/adr/0002-orden-plataformas.md)
+- [ADR-0003: tienda de skins y calculadoras](./docs/adr/0003-tienda-skins-y-calculadoras.md)
 - [Planes](./docs/plans/)
