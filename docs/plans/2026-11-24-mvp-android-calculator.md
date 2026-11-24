@@ -2118,25 +2118,29 @@ class HistoryPanel extends StatelessWidget {
 #### T27 — Test rojo de la página de la calculadora
 
 - **Archivo principal:** `test/widget/calculator_page_test.dart` (nuevo).
-- **Criterio de aceptación:** falla en rojo hasta T28; comprueba resultado, toggle científico, toggle DEG/RAD, historial global y error localizado.
+- **Criterio de aceptación:** falla en rojo hasta T28; comprueba resultado, toggle científico, toggle DEG/RAD, historial global y error localizado. El resultado se verifica leyendo el `text` del widget con key `calc.display` (no con `find.text`, porque el display es `CustomPaint` y `find.text('5')` coincide con la tecla `5`). El historial global se comprueba con un cálculo **exitoso** en modo científico que sobrevive al cambio a modo normal, con entrada en la store inyectada y fila `calc.history.0` visible.
 - **Código literal:**
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:retro_calculator/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:retro_calculator/app.dart';
+import 'package:retro_calculator/core/widgets/seven_segment_display.dart';
 import 'package:retro_calculator/features/calculator/data/local/in_memory_history_store.dart';
 import 'package:retro_calculator/features/calculator/data/local/local_counters.dart';
 import 'package:retro_calculator/features/calculator/presentation/calculator_page.dart';
 import 'package:retro_calculator/features/calculator/presentation/viewmodels/calculator_view_model.dart';
+import 'package:retro_calculator/l10n/app_localizations.dart';
 
 void main() {
-  Future<void> pumpApp(WidgetTester tester) {
+  Future<void> pumpApp(
+    WidgetTester tester, {
+    InMemoryHistoryStore? historyStore,
+  }) {
     return tester.pumpWidget(
       RetroCalculatorApp(
-        historyStore: InMemoryHistoryStore(),
+        historyStore: historyStore ?? InMemoryHistoryStore(),
         counters: LocalCounters(),
       ),
     );
@@ -2150,7 +2154,12 @@ void main() {
       await tester.tap(find.byKey(Key('calc.key.$key')));
       await tester.pumpAndSettle();
     }
-    expect(find.text('5'), findsWidgets);
+    expect(
+      tester
+          .widget<SevenSegmentDisplay>(find.byKey(const Key('calc.display')))
+          .text,
+      '5',
+    );
   });
 
   testWidgets('el toggle revela las teclas científicas y DEG/RAD', (
@@ -2174,24 +2183,46 @@ void main() {
   testWidgets('el historial es global y el error está localizado', (
     WidgetTester tester,
   ) async {
-    await pumpApp(tester);
+    final InMemoryHistoryStore store = InMemoryHistoryStore();
+    await pumpApp(tester, historyStore: store);
     final AppLocalizations l10n = AppLocalizations.of(
       tester.element(find.byType(CalculatorPage)),
     )!;
+    final CalculatorViewModel vm = Provider.of<CalculatorViewModel>(
+      tester.element(find.byType(CalculatorPage)),
+      listen: false,
+    );
 
     for (final String key in <String>['1', '/', '0', '=']) {
       await tester.tap(find.byKey(Key('calc.key.$key')));
       await tester.pumpAndSettle();
     }
     expect(find.text(l10n.errorDivisionByZero), findsOneWidget);
-
-    final CalculatorViewModel vm = Provider.of<CalculatorViewModel>(
-      tester.element(find.byType(CalculatorPage)),
-      listen: false,
-    );
-    vm.toggleProfile();
-    await tester.pumpAndSettle();
     expect(vm.history, isEmpty);
+
+    await tester.tap(find.byKey(const Key('calc.toggle.mode')));
+    await tester.pumpAndSettle();
+    for (final String key in <String>['2', '+', '3', '=']) {
+      await tester.tap(find.byKey(Key('calc.key.$key')));
+      await tester.pumpAndSettle();
+    }
+    expect(
+      tester
+          .widget<SevenSegmentDisplay>(find.byKey(const Key('calc.display')))
+          .text,
+      '5',
+    );
+    expect(vm.history, hasLength(1));
+    expect(vm.history.single.profileId.name, 'scientific');
+    expect((await store.load()).single.result, 5);
+
+    await tester.tap(find.byKey(const Key('calc.toggle.mode')));
+    await tester.pumpAndSettle();
+    expect(vm.history, hasLength(1));
+
+    await tester.tap(find.text(l10n.historyTitle));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('calc.history.0')), findsOneWidget);
   });
 }
 ```
@@ -2201,7 +2232,7 @@ void main() {
 #### T28 — Integración de `CalculatorPage`
 
 - **Archivo principal:** `lib/features/calculator/presentation/calculator_page.dart` (evoluciona el shell existente).
-- **Criterio de aceptación:** la página consume Provider, construye etiquetas desde ARB, pasa el separador y decimales al display/panel y expone las keys `calc.toggle.mode` y `calc.toggle.angle`; el test del slice pasa.
+- **Criterio de aceptación:** la página consume Provider, construye etiquetas desde ARB, pasa el separador y decimales al display/panel y expone las keys `calc.display`, `calc.toggle.mode` y `calc.toggle.angle`; el test del slice pasa.
 - **Código literal:**
 
 ```dart
@@ -2292,7 +2323,10 @@ class _CalculatorPageState extends State<CalculatorPage> {
                   children: <Widget>[
                     Padding(
                       padding: const EdgeInsets.all(12),
-                      child: SevenSegmentDisplay(text: vm.displayText),
+                      child: SevenSegmentDisplay(
+                        key: const Key('calc.display'),
+                        text: vm.displayText,
+                      ),
                     ),
                     if (vm.errorKey != null)
                       Text(
