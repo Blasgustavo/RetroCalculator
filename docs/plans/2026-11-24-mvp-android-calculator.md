@@ -103,7 +103,7 @@ Convención para cada tarea: **Archivo principal**, **Criterio de aceptación** 
 #### T01 — Test rojo del contrato del motor
 
 - **Archivo principal:** `test/unit/calculator/parser_test.dart` (nuevo).
-- **Criterio de aceptación:** el archivo existe y falla en rojo porque `lexer.dart`, `parser.dart`, `evaluator.dart`, capacidades y perfiles aún no existen; contiene 14 casos concretos de precedencia, paréntesis, asociatividad, DEG/RAD, porcentaje contextual, funciones inversas, recíproco, cuadrado, errores y rechazo de capacidades no soportadas en modo normal.
+- **Criterio de aceptación:** el archivo existe y falla en rojo porque `lexer.dart`, `parser.dart`, `evaluator.dart`, capacidades y perfiles aún no existen; contiene 15 casos concretos de precedencia, paréntesis, asociatividad, DEG/RAD, porcentaje contextual, funciones inversas, recíproco, cuadrado, errores y rechazo de capacidades no soportadas en modo normal.
 - **Código literal:**
 
 ```dart
