@@ -1051,8 +1051,8 @@ String formatNumber(
 
 #### T14 — ARB con claves idénticas y generación
 
-- **Archivos principales:** `lib/l10n/app_en.arb`, `lib/l10n/app_es_PE.arb`, `lib/l10n/app_pt_BR.arb` y `l10n.yaml` (nuevos).
-- **Criterio de aceptación:** los tres ARB tienen exactamente las mismas 40 claves; `flutter gen-l10n` termina sin errores y genera `AppLocalizations` con delegados para `en`, `es_PE` y `pt_BR`.
+- **Archivos principales:** `lib/l10n/app_en.arb`, `lib/l10n/app_es_PE.arb`, `lib/l10n/app_pt_BR.arb` y `l10n.yaml` (nuevos); `pubspec.yaml` se evoluciona con `flutter: generate: true` para que el paquete sintético `flutter_gen` quede registrado y `package:flutter_gen/gen_l10n/app_localizations.dart` resuelva.
+- **Criterio de aceptación:** los tres ARB tienen exactamente las mismas 40 claves; `flutter gen-l10n` termina sin errores y genera `AppLocalizations` con delegados para `en`, `es_PE` y `pt_BR`; `flutter pub get` registra `flutter_gen` en `.dart_tool/package_config.json`.
 - **Código literal (`l10n.yaml`):**
 
 ```yaml
@@ -1060,6 +1060,14 @@ arb-dir: lib/l10n
 template-arb-file: app_en.arb
 output-localization-file: app_localizations.dart
 preferred-supported-locales: [es_PE, en, pt_BR]
+```
+
+- **Código literal (`pubspec.yaml`, sección `flutter`):**
+
+```yaml
+flutter:
+  generate: true
+  uses-material-design: true
 ```
 
 - **Código literal (`lib/l10n/app_en.arb`):**
