@@ -1037,7 +1037,7 @@ String formatNumber(
   final String grouping = separator == DecimalSeparator.dot ? ',' : '.';
   final String integer = parts[0].replaceAllMapped(
     RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (RegExpMatch _) => grouping,
+    (Match _) => grouping,
   );
   final String fraction = parts.length > 1
       ? '${separator == DecimalSeparator.dot ? '.' : ','}${parts[1]}'
@@ -1051,8 +1051,8 @@ String formatNumber(
 
 #### T14 — ARB con claves idénticas y generación
 
-- **Archivos principales:** `lib/l10n/app_en.arb`, `lib/l10n/app_es_PE.arb`, `lib/l10n/app_pt_BR.arb` y `l10n.yaml` (nuevos); `pubspec.yaml` se evoluciona con `flutter: generate: true` para que el paquete sintético `flutter_gen` quede registrado y `package:flutter_gen/gen_l10n/app_localizations.dart` resuelva.
-- **Criterio de aceptación:** los tres ARB tienen exactamente las mismas 40 claves; `flutter gen-l10n` termina sin errores y genera `AppLocalizations` con delegados para `en`, `es_PE` y `pt_BR`; `flutter pub get` registra `flutter_gen` en `.dart_tool/package_config.json`.
+- **Archivos principales:** `lib/l10n/app_en.arb`, `lib/l10n/app_es_PE.arb`, `lib/l10n/app_pt_BR.arb`, `lib/l10n/app_es.arb` y `lib/l10n/app_pt.arb` (nuevos; los dos últimos son fallback técnico), `l10n.yaml` (nuevo) y el Dart generado en `lib/l10n/app_localizations*.dart` (nuevo, commiteado); `pubspec.yaml` se evoluciona con `flutter: generate: true`.
+- **Criterio de aceptación:** los cinco ARB tienen exactamente las mismas 40 claves; `app_es.arb` replica las claves de `app_es_PE.arb` y `app_pt.arb` las de `app_pt_BR.arb`, pero `LocaleResolver` sigue ofreciendo solo `es_PE`, `en` y `pt_BR` en el lote 1. `flutter gen-l10n` y `flutter pub get` terminan sin errores con Flutter 3.44 y generan `AppLocalizations` en `lib/l10n/`; se importa como `package:retro_calculator/l10n/app_localizations.dart`.
 - **Código literal (`l10n.yaml`):**
 
 ```yaml
@@ -1211,6 +1211,8 @@ flutter:
 }
 ```
 
+- **Fallback técnico:** `lib/l10n/app_es.arb` contiene las mismas 40 claves que `app_es_PE.arb` y `lib/l10n/app_pt.arb` las mismas que `app_pt_BR.arb`. Flutter 3.44 exige estos ARB base cuando existen locales con región; no amplían el selector de idioma del lote 1.
+
 - **Código literal (`test/unit/i18n/arb_keys_test.dart`, soporte):**
 
 ```dart
@@ -1220,10 +1222,12 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('los tres ARB tienen exactamente las mismas 40 claves', () {
+  test('los cinco ARB tienen exactamente las mismas 40 claves', () {
     const List<String> files = <String>[
       'app_en.arb',
+      'app_es.arb',
       'app_es_PE.arb',
+      'app_pt.arb',
       'app_pt_BR.arb',
     ];
     final List<Set<String>> keySets = files.map((String file) {
@@ -1295,7 +1299,7 @@ class AppStrings {
 - **Código literal (soporte `lib/core/i18n/error_label.dart`):**
 
 ```dart
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:retro_calculator/l10n/app_localizations.dart';
 
 String errorLabel(String code, AppLocalizations l10n) {
   return switch (code) {
@@ -2016,7 +2020,7 @@ class CalculatorViewModel extends ChangeNotifier {
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:retro_calculator/l10n/app_localizations.dart';
 
 import '../../../core/i18n/number_formatting.dart';
 import '../../data/models/history_entry.dart';
@@ -2070,7 +2074,7 @@ class HistoryPanel extends StatelessWidget {
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:retro_calculator/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:retro_calculator/app.dart';
@@ -2153,7 +2157,7 @@ void main() {
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:retro_calculator/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/i18n/error_label.dart';
@@ -2312,7 +2316,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:retro_calculator/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'config/routes.dart';
@@ -2374,7 +2378,7 @@ class RetroCalculatorApp extends StatelessWidget {
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:retro_calculator/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:retro_calculator/app.dart';
 import 'package:retro_calculator/features/calculator/data/local/in_memory_history_store.dart';

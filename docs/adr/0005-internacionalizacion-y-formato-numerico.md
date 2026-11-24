@@ -16,6 +16,7 @@ El público inicial es peruano y el producto se entrega en varias plataformas, c
 - El **formato decimal depende del locale**. El **parser acepta tanto coma como punto** como separador decimal, sin importar el locale activo.
 - Los **nombres de skins y de calculadoras son claves de traducción**, también en el **catálogo descargado**: el manifiesto referencia claves, no textos literales.
 - El motor sigue siendo **Dart puro** y **recibe la regla de formato por inyección**, sin importar Flutter.
+- Con Flutter 3.44+, los locales con región (`es-PE`, `pt-BR`) exigen un **ARB base** (`es`, `pt`) como fallback técnico. Se incluyen en el lote 1 solo para herencia de recursos y **no se añaden al selector de locale** hasta el lote 2. El Dart generado vive en `lib/l10n/` y se commitea; no se usa el paquete sintético `flutter_gen`, retirado en este SDK.
 
 ## Consecuencias
 
@@ -26,6 +27,8 @@ El público inicial es peruano y el producto se entrega en varias plataformas, c
 - Negativas: el catálogo descargado debe respetar el esquema de claves y su versión debe coordinarse con los ARB de la app.
 - Negativas: el lote 3 (RTL) requerirá revisar layout, alineación y dirección de botones antes de habilitarlo.
 - Riesgo mitigado: la regla de formato se inyecta en el motor; no se introduce dependencia de Flutter en `lib/features/calculator/domain/`.
+- Positivas: `flutter gen-l10n` y `flutter pub get` funcionan con el SDK instalado y el Dart generado es revisable en PR.
+- Negativas: el repo tiene cinco ARB aunque solo tres sean seleccionables en el lote 1; la CI debe verificar las 40 claves también en `es` y `pt`.
 
 ## Alternativas descartadas
 
@@ -35,9 +38,12 @@ El público inicial es peruano y el producto se entrega en varias plataformas, c
 - **Parser que acepte solo punto:** rechaza la coma decimal habitual en es-PE y pt-BR.
 - **Nombres de skins y calculadoras como literales en el manifiesto:** no se pueden traducir y divergen de los ARB de la app.
 - **Publicar RTL en el lote 1:** añade coste de layout y validación antes de tener estables los primeros locales.
+- **Generar bajo `.dart_tool/flutter_gen/` con import relativo:** deja el Dart generado fuera del repo y rompe la reproducción en CI.
+- **Exigir un SDK de Flutter anterior:** no está instalado y retrasaría el MVP sin cambiar el resultado.
 
 ## Referencias
 
 - [ADR-0003: tienda de skins y calculadoras](0003-tienda-skins-y-calculadoras.md) — catálogo y nombres de artículos.
 - [ADR-0004: arquitectura modular y generador](0004-arquitectura-modular-y-generador.md) — motor en Dart puro y manifiesto descargable.
 - Documento de idea: `C:/Users/qty94/.opencode/plan/retrocalculator-idea.md` (v0.5).
+- [Plan del MVP Android](../plans/2026-11-24-mvp-android-calculator.md) — implementación de i18n en los slices S2 y S4.
