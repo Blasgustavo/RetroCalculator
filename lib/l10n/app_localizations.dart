@@ -341,6 +341,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Non-finite result'**
   String get errorNonFiniteResult;
+
+  /// No description provided for @skinSelectorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Skin selector'**
+  String get skinSelectorTitle;
+
+  /// No description provided for @skinClassicName.
+  ///
+  /// In en, this message translates to:
+  /// **'Classic amber'**
+  String get skinClassicName;
+
+  /// No description provided for @skinLcdClassicaName.
+  ///
+  /// In en, this message translates to:
+  /// **'Classic LCD'**
+  String get skinLcdClassicaName;
+
+  /// No description provided for @skinResetLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset theme'**
+  String get skinResetLabel;
 }
 
 class _AppLocalizationsDelegate

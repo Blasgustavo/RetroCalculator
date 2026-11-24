@@ -9,6 +9,9 @@ import 'features/calculator/data/local/history_store.dart';
 import 'features/calculator/data/local/local_counters.dart';
 import 'features/calculator/data/local/shared_preferences_history_store.dart';
 import 'features/calculator/presentation/viewmodels/calculator_view_model.dart';
+import 'features/skins/data/skin_repository.dart';
+import 'features/skins/presentation/skin_controller.dart';
+import 'features/skins/presentation/skin_scope.dart';
 import 'platform/preferences/shared_preferences_key_value_store.dart';
 
 class RetroCalculatorApp extends StatelessWidget {
@@ -40,19 +43,26 @@ class RetroCalculatorApp extends StatelessWidget {
             context.read<LocalCounters>(),
           ),
         ),
+        Provider<SkinRepository>(create: (_) => const SkinRepository()),
+        ChangeNotifierProvider<SkinController>(create: (_) => SkinController()),
       ],
-      child: MaterialApp(
-        onGenerateTitle: (BuildContext context) =>
-            AppLocalizations.of(context)!.appName,
-        debugShowCheckedModeBanner: false,
-        locale: LocaleResolver.initial(),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        theme: DSTheme.toMaterialTheme(Brightness.light),
-        darkTheme: DSTheme.toMaterialTheme(Brightness.dark),
-        themeMode: ThemeMode.system,
-        initialRoute: AppRoutes.home,
-        onGenerateRoute: AppRoutes.onGenerateRoute,
+      child: Builder(
+        builder: (BuildContext context) => SkinScope(
+          controller: context.read<SkinController>(),
+          child: MaterialApp(
+            onGenerateTitle: (BuildContext context) =>
+                AppLocalizations.of(context)!.appName,
+            debugShowCheckedModeBanner: false,
+            locale: LocaleResolver.initial(),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: DSTheme.toMaterialTheme(Brightness.light),
+            darkTheme: DSTheme.toMaterialTheme(Brightness.dark),
+            themeMode: ThemeMode.system,
+            initialRoute: AppRoutes.home,
+            onGenerateRoute: AppRoutes.onGenerateRoute,
+          ),
+        ),
       ),
     );
   }
