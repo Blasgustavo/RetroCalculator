@@ -2,9 +2,9 @@
 
 Calculadora gratuita con modos **normal** y **científico**, construida en Flutter para **Android**, **Windows** y **iOS**.
 
-El motor de cálculo es siempre gratuito. La monetización proviene únicamente de **skins cosméticos** que se desbloquean **por tiempo limitado**, ya sea viendo un **anuncio recompensado** o mediante **pago real**.
+El motor de cálculo es siempre gratuito. La monetización proviene de una **tienda de skins y calculadoras funcionales** con desbloqueos **por tiempo limitado**, ya sea viendo un **anuncio recompensado** o mediante **pago real**. La suscripción habilita el catálogo, nunca la calculadora base; no hay banners ni intersticiales.
 
-> Estado actual: infraestructura del proyecto y sistema de trabajo configurados. La calculadora se implementará en el primer plan de desarrollo.
+> Estado actual: infraestructura del proyecto, ADR-0001 a ADR-0006 y el plan del MVP Android están listos. La calculadora se implementará en el worktree `feature-calculator-engine`.
 
 ---
 
@@ -81,4 +81,7 @@ Convención de commits: `type(scope): summary` en inglés, cuerpo en español.
 - [ADR-0001: skins temporales y anuncios](./docs/adr/0001-skins-temporales-y-anuncios.md)
 - [ADR-0002: orden de plataformas](./docs/adr/0002-orden-plataformas.md)
 - [ADR-0003: tienda de skins y calculadoras](./docs/adr/0003-tienda-skins-y-calculadoras.md)
+- [ADR-0004: arquitectura modular y generador](./docs/adr/0004-arquitectura-modular-y-generador.md)
+- [ADR-0005: internacionalización y formato numérico](./docs/adr/0005-internacionalizacion-y-formato-numerico.md)
+- [ADR-0006: monetización del catálogo](./docs/adr/0006-monetizacion-del-catalogo.md)
 - [Planes](./docs/plans/)
