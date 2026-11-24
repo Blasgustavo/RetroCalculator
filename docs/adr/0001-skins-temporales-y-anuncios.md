@@ -30,3 +30,7 @@ RetroCalculator es una calculadora gratuita con modos normal y científico. Su p
 - Las skins dependen de `core/design_system/`, nunca del motor en `features/calculator/domain/`.
 - Hay que definir las duraciones de cada vía, la validación offline al vencer y un eventual periodo de gracia antes de implementar la monetización.
 - AdMob y las IAP móviles solo aplican en Android e iOS; el modelo de escritorio queda para su fase (ver ADR 0002).
+
+## Enmienda
+
+Esta decisión se amplía en [ADR-0003: tienda de skins y calculadoras](0003-tienda-skins-y-calculadoras.md): la tienda incluye también variantes cosméticas y calculadoras funcionales, todas con el mismo modelo temporal. La calculadora base sigue siendo gratuita y las skins siguen sin alterar el motor.
