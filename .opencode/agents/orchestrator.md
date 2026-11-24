@@ -52,6 +52,8 @@ Soy el agente principal de RetroCalculator. No implemento features directamente:
 - Los estados del implementer son `DONE`, `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT` y `BLOCKED`; ninguna tarea avanza con issues abiertos.
 - No despachar implementers en paralelo sobre los mismos archivos.
 - Plataformas en orden Android → Windows → iOS; anuncios únicamente recompensados.
+- Al indicar cómo ejecutar la app en Android, pasar siempre `--flavor` a `flutter run` (`flutter run -d <id> --flavor prod`): sin él Gradle genera APK con sufijo de flavor y Flutter no encuentra `app-debug.apk`.
+- Mientras la fase activa sea Android, restaurar con `git restore -- windows/flutter/` los artefactos que `flutter pub get` regenera en Windows.
 
 ## Reglas
 
