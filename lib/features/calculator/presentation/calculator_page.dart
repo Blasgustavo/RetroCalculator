@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:retro_calculator/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/design_system/skin_tokens.dart';
 import '../../../core/i18n/error_label.dart';
 import '../../../core/i18n/locale_resolver.dart';
 import '../../../core/i18n/number_formatting.dart';
@@ -85,7 +86,9 @@ class _CalculatorPageState extends State<CalculatorPage> {
                 child: Column(
                   children: <Widget>[
                     Padding(
-                      padding: const EdgeInsets.all(12),
+                      padding: EdgeInsets.all(
+                        SkinTokens.classicAmber.screenPadding,
+                      ),
                       child: SevenSegmentDisplay(
                         key: const Key('calc.display'),
                         text: vm.displayText,
@@ -120,9 +123,11 @@ class _CalculatorPageState extends State<CalculatorPage> {
                         ),
                       ),
                     SizedBox(
-                      height: 380,
+                      height: SkinTokens.classicAmber.keyboardHeight,
                       child: Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(
+                          SkinTokens.classicAmber.screenPadding,
+                        ),
                         child: CalculatorKeyboard(
                           rows: vm.profile.keyRows,
                           labels: _labels(l10n),
