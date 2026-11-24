@@ -1,0 +1,58 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code: se versiona a propósito para compartir configuración
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Worktrees aislados (IMPORTANTE: nunca versionar)
+.worktrees/
+worktrees/
+
+# Secretos y credenciales
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+android/key.properties
+android/keystore.jks
+ios/*.p12
+ios/*.mobileprovision
+**/distribution_certificate.p12
+**/provisioning_profile.mobileprovision
+
+# Symbolication / obfuscación
+app.*.symbols
+app.*.map.json
+
+# Artefactos de Android Studio
+/android/app/debug
+/android/app/profile
+/android/app/release

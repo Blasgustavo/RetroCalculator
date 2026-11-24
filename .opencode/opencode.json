@@ -1,0 +1,72 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "skill": {
+      "*": "allow"
+    },
+    "bash": {
+      "*": "ask",
+      "git status": "allow",
+      "git diff": "allow",
+      "git log": "allow",
+      "flutter analyze": "allow",
+      "flutter test": "allow"
+    }
+  },
+  "agent": {
+    "orchestrator": {
+      "mode": "primary",
+      "description": "Agente Orquestador de RetroCalculator. Coordina calculator, skins, monetization, platform, testing, docs e infra.",
+      "prompt": ".opencode/agents/orchestrator.md",
+      "permission": {
+        "skill": {
+          "*": "allow"
+        },
+        "task": {
+          "calculator": "allow",
+          "skins": "allow",
+          "monetization": "allow",
+          "platform": "allow",
+          "testing": "allow",
+          "docs": "allow",
+          "infra": "allow"
+        }
+      }
+    },
+    "calculator": {
+      "mode": "subagent",
+      "description": "Motor de cálculo y calculadora normal/científica",
+      "prompt": ".opencode/agents/calculator.md"
+    },
+    "skins": {
+      "mode": "subagent",
+      "description": "Catálogo de skins, tienda y vista previa",
+      "prompt": ".opencode/agents/skins.md"
+    },
+    "monetization": {
+      "mode": "subagent",
+      "description": "Anuncios recompensados, IAP y entitlements temporales",
+      "prompt": ".opencode/agents/monetization.md"
+    },
+    "platform": {
+      "mode": "subagent",
+      "description": "Adaptaciones Android, Windows e iOS",
+      "prompt": ".opencode/agents/platform.md"
+    },
+    "testing": {
+      "mode": "subagent",
+      "description": "Tests unitarios, de widget e integración",
+      "prompt": ".opencode/agents/testing.md"
+    },
+    "docs": {
+      "mode": "subagent",
+      "description": "Documentación técnica, ADRs y planes",
+      "prompt": ".opencode/agents/docs.md"
+    },
+    "infra": {
+      "mode": "subagent",
+      "description": "CI/CD, GitHub Actions y releases",
+      "prompt": ".opencode/agents/infra.md"
+    }
+  }
+}

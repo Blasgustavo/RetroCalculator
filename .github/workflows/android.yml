@@ -1,0 +1,68 @@
+name: Android Release
+
+# Build de release de RetroCalculator (Android first).
+# Secrets requeridos (Settings → Secrets and variables → Actions):
+#   KEYSTORE_BASE64        — keystore de producción en base64
+#   KEYSTORE_STORE_PASSWORD
+#   KEYSTORE_KEY_ALIAS
+#   KEYSTORE_KEY_PASSWORD
+
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: 'Flavor a construir'
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Tests
+        run: flutter test
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore.jks
+          cat > android/key.properties <<EOF
+          storeFile=keystore.jks
+          storePassword=${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          keyAlias=${{ secrets.KEYSTORE_KEY_ALIAS }}
+          keyPassword=${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          EOF
+
+      - name: Build APK
+        run: flutter build apk --release --flavor=${{ inputs.flavor || 'prod' }} --build-number=${{ github.run_number }}
+
+      - name: Build App Bundle
+        run: flutter build appbundle --release --flavor=${{ inputs.flavor || 'prod' }} --build-number=${{ github.run_number }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: retrocalculator-android-release
+          path: |
+            build/app/outputs/flutter-apk/*.apk
+            build/app/outputs/bundle/**/*.aab

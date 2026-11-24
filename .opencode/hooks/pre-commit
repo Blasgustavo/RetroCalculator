@@ -1,0 +1,12 @@
+#!/bin/sh
+# Hook de pre-commit de RetroCalculator.
+# Instalar con: git config core.hooksPath .opencode/hooks
+set -e
+
+echo "[pre-commit] flutter analyze"
+flutter analyze
+
+echo "[pre-commit] flutter test"
+flutter test
+
+echo "[pre-commit] OK"
