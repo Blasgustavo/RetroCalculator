@@ -1,2 +1,3 @@
 # Flutter regenera estos archivos con LF en todas las plataformas.
 windows/flutter/generated_* text eol=lf
+tool/skins/definitions/lcd_classica.yaml text eol=lf
