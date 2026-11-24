@@ -2360,7 +2360,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
 #### T29 — Cableado de providers y evolución de `app_test.dart`
 
 - **Archivos principales:** `lib/app.dart` (evoluciona) con `test/widget/app_test.dart` (evoluciona) como soporte.
-- **Criterio de aceptación:** `MultiProvider` inyecta `HistoryStore`, `LocalCounters` y `CalculatorViewModel`; se usan delegados/locale de `AppLocalizations`; `routes.dart` sigue intacto; el test de arranque pasa con stores en memoria.
+- **Criterio de aceptación:** `MultiProvider` inyecta `HistoryStore`, `LocalCounters` y `CalculatorViewModel`; el store por defecto compone `SharedPreferencesKeyValueStore.create()` con `SharedPreferencesHistoryStore` (el factory `create()` de la store se eliminó en T19); se usan delegados/locale de `AppLocalizations`; `routes.dart` sigue intacto; el test de arranque pasa con stores en memoria. Ningún archivo fuera de `lib/platform/` importa `package:shared_preferences/...`.
 - **Código literal (`lib/app.dart`):**
 
 ```dart
@@ -2375,6 +2375,7 @@ import 'features/calculator/data/local/history_store.dart';
 import 'features/calculator/data/local/local_counters.dart';
 import 'features/calculator/data/local/shared_preferences_history_store.dart';
 import 'features/calculator/presentation/viewmodels/calculator_view_model.dart';
+import 'platform/preferences/shared_preferences_key_value_store.dart';
 
 class RetroCalculatorApp extends StatelessWidget {
   const RetroCalculatorApp({
@@ -2393,7 +2394,10 @@ class RetroCalculatorApp extends StatelessWidget {
       providers: [
         Provider<HistoryStore>(
           create: (_) =>
-              _historyStore ?? SharedPreferencesHistoryStore.create(),
+              _historyStore ??
+              SharedPreferencesHistoryStore(
+                SharedPreferencesKeyValueStore.create(),
+              ),
         ),
         Provider<LocalCounters>(
           create: (_) => _counters ?? LocalCounters(),
