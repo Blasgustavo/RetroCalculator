@@ -103,7 +103,7 @@ Convención para cada tarea: **Archivo principal**, **Criterio de aceptación** 
 #### T01 — Test rojo del contrato del motor
 
 - **Archivo principal:** `test/unit/calculator/parser_test.dart` (nuevo).
-- **Criterio de aceptación:** el archivo existe y falla en rojo porque `lexer.dart`, `parser.dart`, `evaluator.dart`, capacidades y perfiles aún no existen; contiene 14 casos concretos de precedencia, paréntesis, asociatividad, DEG/RAD, porcentaje contextual, funciones inversas, recíproco, cuadrado, errores y rechazo de capacidades no soportadas en modo normal.
+- **Criterio de aceptación:** el archivo existe y falla en rojo porque `lexer.dart`, `parser.dart`, `evaluator.dart`, capacidades y perfiles aún no existen; contiene 15 casos concretos de precedencia, paréntesis, asociatividad, DEG/RAD, porcentaje contextual, funciones inversas, recíproco, cuadrado, errores y rechazo de capacidades no soportadas en modo normal.
 - **Código literal:**
 
 ```dart
@@ -989,6 +989,14 @@ void main() {
           separator: DecimalSeparator.comma, maxFractionDigits: 3),
       '0,333',
     );
+    expect(
+      formatNumber(100, separator: DecimalSeparator.dot, maxFractionDigits: 0),
+      '100',
+    );
+    expect(
+      formatNumber(0, separator: DecimalSeparator.comma, maxFractionDigits: 0),
+      '0',
+    );
   });
 }
 ```
@@ -998,7 +1006,7 @@ void main() {
 #### T13 — Regla numérica por locale
 
 - **Archivo principal:** `lib/core/i18n/number_formatting.dart` (nuevo).
-- **Criterio de aceptación:** Dart puro (solo `dart:core`), sin imports de Flutter; los 3 tests del slice pasan; el parser ya acepta coma y punto, así que la salida con coma es reentrante.
+- **Criterio de aceptación:** Dart puro (solo `dart:core`), sin imports de Flutter; los 3 tests del slice pasan; con `maxFractionDigits: 0` no se recortan ceros de la parte entera; el parser ya acepta coma y punto, así que la salida con coma es reentrante.
 - **Código literal:**
 
 ```dart
@@ -1028,16 +1036,18 @@ String formatNumber(
   }
   final int digits = maxFractionDigits.clamp(0, 12);
   final String fixed = value.toStringAsFixed(digits);
-  final String trimmed = fixed
-      .replaceFirst(RegExp(r'0+$'), '')
-      .replaceFirst(RegExp(r'\.$'), '');
+  final String trimmed = digits == 0
+      ? fixed
+      : fixed
+          .replaceFirst(RegExp(r'0+$'), '')
+          .replaceFirst(RegExp(r'\.$'), '');
   final bool negative = trimmed.startsWith('-');
   final String unsigned = negative ? trimmed.substring(1) : trimmed;
   final List<String> parts = unsigned.split('.');
   final String grouping = separator == DecimalSeparator.dot ? ',' : '.';
   final String integer = parts[0].replaceAllMapped(
     RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (RegExpMatch _) => grouping,
+    (Match _) => grouping,
   );
   final String fraction = parts.length > 1
       ? '${separator == DecimalSeparator.dot ? '.' : ','}${parts[1]}'
@@ -1051,8 +1061,8 @@ String formatNumber(
 
 #### T14 — ARB con claves idénticas y generación
 
-- **Archivos principales:** `lib/l10n/app_en.arb`, `lib/l10n/app_es_PE.arb`, `lib/l10n/app_pt_BR.arb` y `l10n.yaml` (nuevos).
-- **Criterio de aceptación:** los tres ARB tienen exactamente las mismas 40 claves; `flutter gen-l10n` termina sin errores y genera `AppLocalizations` con delegados para `en`, `es_PE` y `pt_BR`.
+- **Archivos principales:** `lib/l10n/app_en.arb`, `lib/l10n/app_es_PE.arb`, `lib/l10n/app_pt_BR.arb`, `lib/l10n/app_es.arb` y `lib/l10n/app_pt.arb` (nuevos; los dos últimos son fallback técnico), `l10n.yaml` (nuevo) y el Dart generado en `lib/l10n/app_localizations*.dart` (nuevo, commiteado); `pubspec.yaml` se evoluciona con `flutter: generate: true` y con las dependencias que el Dart generado exige: `flutter_localizations` (SDK) e `intl`.
+- **Criterio de aceptación:** los cinco ARB tienen exactamente las mismas 40 claves; `app_es.arb` replica las claves de `app_es_PE.arb` y `app_pt.arb` las de `app_pt_BR.arb`, pero `LocaleResolver` sigue ofreciendo solo `es_PE`, `en` y `pt_BR` en el lote 1. `flutter gen-l10n` y `flutter pub get` terminan sin errores con Flutter 3.44; `AppLocalizations` se genera en `lib/l10n/`, se importa como `package:retro_calculator/l10n/app_localizations.dart` y `flutter analyze` da 0 issues porque `flutter_localizations` e `intl` están declarados.
 - **Código literal (`l10n.yaml`):**
 
 ```yaml
@@ -1061,6 +1071,23 @@ template-arb-file: app_en.arb
 output-localization-file: app_localizations.dart
 preferred-supported-locales: [es_PE, en, pt_BR]
 ```
+
+- **Código literal (`pubspec.yaml`):**
+
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+
+flutter:
+  generate: true
+  uses-material-design: true
+```
+
+`flutter_localizations` e `intl` son dependencias del Dart generado en Flutter 3.44: sin ellas `flutter analyze` reporta 12 errores de URI y símbolos no definidos.
 
 - **Código literal (`lib/l10n/app_en.arb`):**
 
@@ -1203,6 +1230,8 @@ preferred-supported-locales: [es_PE, en, pt_BR]
 }
 ```
 
+- **Fallback técnico:** `lib/l10n/app_es.arb` contiene las mismas 40 claves que `app_es_PE.arb` y `lib/l10n/app_pt.arb` las mismas que `app_pt_BR.arb`. Flutter 3.44 exige estos ARB base cuando existen locales con región; no amplían el selector de idioma del lote 1.
+
 - **Código literal (`test/unit/i18n/arb_keys_test.dart`, soporte):**
 
 ```dart
@@ -1212,10 +1241,12 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('los tres ARB tienen exactamente las mismas 40 claves', () {
+  test('los cinco ARB tienen exactamente las mismas 40 claves', () {
     const List<String> files = <String>[
       'app_en.arb',
+      'app_es.arb',
       'app_es_PE.arb',
+      'app_pt.arb',
       'app_pt_BR.arb',
     ];
     final List<Set<String>> keySets = files.map((String file) {
@@ -1287,7 +1318,7 @@ class AppStrings {
 - **Código literal (soporte `lib/core/i18n/error_label.dart`):**
 
 ```dart
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:retro_calculator/l10n/app_localizations.dart';
 
 String errorLabel(String code, AppLocalizations l10n) {
   return switch (code) {
@@ -1432,34 +1463,65 @@ class InMemoryHistoryStore implements HistoryStore {
 
 #### T19 — Persistencia local sin red
 
-- **Archivo principal:** `lib/features/calculator/data/local/shared_preferences_history_store.dart` (y `pubspec.yaml` solo para añadir la dependencia).
-- **Criterio de aceptación:** `flutter pub add shared_preferences` ejecutado; la store lee/escribe la clave `calculator.history.v1`, aplica el mismo tope 50 y no contiene ninguna llamada HTTP.
+- **Archivos principales:** `lib/platform/preferences/key_value_store.dart` (nuevo, interfaz), `lib/platform/preferences/shared_preferences_key_value_store.dart` (nuevo, único import del plugin), `lib/features/calculator/data/local/shared_preferences_history_store.dart` (nuevo) y `pubspec.yaml` (solo `flutter pub add shared_preferences`).
+- **Criterio de aceptación:** `flutter pub add shared_preferences` ejecutado; ningún archivo fuera de `lib/platform/` importa `package:shared_preferences/...`; la store lee/escribe la clave `calculator.history.v1` a través de `KeyValueStore`, aplica el mismo tope 50 y no contiene llamadas HTTP. El cableado del adaptador concreto se hará en la capa de app durante el Slice 4.
 - **Comando previo:** `flutter pub add shared_preferences`.
-- **Código literal:**
+- **Código literal (`lib/platform/preferences/key_value_store.dart`):**
+
+```dart
+abstract interface class KeyValueStore {
+  Future<String?> getString(String key);
+  Future<void> setString(String key, String value);
+}
+```
+
+- **Código literal (`lib/platform/preferences/shared_preferences_key_value_store.dart`):**
+
+```dart
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'key_value_store.dart';
+
+class SharedPreferencesKeyValueStore implements KeyValueStore {
+  SharedPreferencesKeyValueStore(this._preferences);
+
+  factory SharedPreferencesKeyValueStore.create() {
+    return SharedPreferencesKeyValueStore(SharedPreferences.getInstance());
+  }
+
+  final Future<SharedPreferences> _preferences;
+
+  @override
+  Future<String?> getString(String key) async =>
+      (await _preferences).getString(key);
+
+  @override
+  Future<void> setString(String key, String value) async {
+    await (await _preferences).setString(key, value);
+  }
+}
+```
+
+- **Código literal (`lib/features/calculator/data/local/shared_preferences_history_store.dart`):**
 
 ```dart
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
-
+import '../../../../platform/preferences/key_value_store.dart';
 import '../models/history_entry.dart';
 import 'history_store.dart';
 import 'in_memory_history_store.dart';
 
 class SharedPreferencesHistoryStore implements HistoryStore {
-  SharedPreferencesHistoryStore(this._preferences);
-
-  factory SharedPreferencesHistoryStore.create() {
-    return SharedPreferencesHistoryStore(SharedPreferences.getInstance());
-  }
+  SharedPreferencesHistoryStore(this._store);
 
   static const String storageKey = 'calculator.history.v1';
 
-  final Future<SharedPreferences> _preferences;
+  final KeyValueStore _store;
 
   @override
   Future<List<HistoryEntry>> load() async {
-    final String? raw = (await _preferences).getString(storageKey);
+    final String? raw = await _store.getString(storageKey);
     if (raw == null || raw.isEmpty) {
       return <HistoryEntry>[];
     }
@@ -1480,13 +1542,12 @@ class SharedPreferencesHistoryStore implements HistoryStore {
         .take(InMemoryHistoryStore.maxEntries)
         .map((HistoryEntry item) => item.toJson())
         .toList(growable: false);
-    await (await _preferences)
-        .setString(storageKey, jsonEncode(serializable));
+    await _store.setString(storageKey, jsonEncode(serializable));
   }
 }
 ```
 
-- **Verificar:** `flutter pub get && flutter analyze lib/features/calculator/data/local`.
+- **Verificar:** `flutter pub get && flutter analyze lib/features/calculator/data/local lib/platform/preferences` y `grep -R "package:shared_preferences" lib --exclude-dir=platform` sin coincidencias.
 
 #### T20 — Test rojo de contadores locales
 
@@ -1539,7 +1600,7 @@ class LocalCounters {
 
 - **Verificar:** `flutter test test/unit/calculator/local_counters_test.dart` (verde).
 
-### Slice 4 — Widgets reutilizables y MVVM (T22–T29)
+### Slice 4 — Widgets reutilizables y MVVM (T22–T30)
 
 #### T22 — Display LCD de siete segmentos
 
@@ -2008,7 +2069,7 @@ class CalculatorViewModel extends ChangeNotifier {
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:retro_calculator/l10n/app_localizations.dart';
 
 import '../../../core/i18n/number_formatting.dart';
 import '../../data/models/history_entry.dart';
@@ -2057,25 +2118,29 @@ class HistoryPanel extends StatelessWidget {
 #### T27 — Test rojo de la página de la calculadora
 
 - **Archivo principal:** `test/widget/calculator_page_test.dart` (nuevo).
-- **Criterio de aceptación:** falla en rojo hasta T28; comprueba resultado, toggle científico, toggle DEG/RAD, historial global y error localizado.
+- **Criterio de aceptación:** falla en rojo hasta T28; comprueba resultado, toggle científico, toggle DEG/RAD, historial global y error localizado. El resultado se verifica leyendo el `text` del widget con key `calc.display` (no con `find.text`, porque el display es `CustomPaint` y `find.text('5')` coincide con la tecla `5`). El historial global se comprueba con un cálculo **exitoso** en modo científico que sobrevive al cambio a modo normal, con entrada en la store inyectada y fila `calc.history.0` visible.
 - **Código literal:**
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:retro_calculator/app.dart';
+import 'package:retro_calculator/core/widgets/seven_segment_display.dart';
 import 'package:retro_calculator/features/calculator/data/local/in_memory_history_store.dart';
 import 'package:retro_calculator/features/calculator/data/local/local_counters.dart';
 import 'package:retro_calculator/features/calculator/presentation/calculator_page.dart';
 import 'package:retro_calculator/features/calculator/presentation/viewmodels/calculator_view_model.dart';
+import 'package:retro_calculator/l10n/app_localizations.dart';
 
 void main() {
-  Future<void> pumpApp(WidgetTester tester) {
+  Future<void> pumpApp(
+    WidgetTester tester, {
+    InMemoryHistoryStore? historyStore,
+  }) {
     return tester.pumpWidget(
       RetroCalculatorApp(
-        historyStore: InMemoryHistoryStore(),
+        historyStore: historyStore ?? InMemoryHistoryStore(),
         counters: LocalCounters(),
       ),
     );
@@ -2089,7 +2154,12 @@ void main() {
       await tester.tap(find.byKey(Key('calc.key.$key')));
       await tester.pumpAndSettle();
     }
-    expect(find.text('5'), findsWidgets);
+    expect(
+      tester
+          .widget<SevenSegmentDisplay>(find.byKey(const Key('calc.display')))
+          .text,
+      '5',
+    );
   });
 
   testWidgets('el toggle revela las teclas científicas y DEG/RAD', (
@@ -2113,24 +2183,46 @@ void main() {
   testWidgets('el historial es global y el error está localizado', (
     WidgetTester tester,
   ) async {
-    await pumpApp(tester);
+    final InMemoryHistoryStore store = InMemoryHistoryStore();
+    await pumpApp(tester, historyStore: store);
     final AppLocalizations l10n = AppLocalizations.of(
       tester.element(find.byType(CalculatorPage)),
     )!;
+    final CalculatorViewModel vm = Provider.of<CalculatorViewModel>(
+      tester.element(find.byType(CalculatorPage)),
+      listen: false,
+    );
 
     for (final String key in <String>['1', '/', '0', '=']) {
       await tester.tap(find.byKey(Key('calc.key.$key')));
       await tester.pumpAndSettle();
     }
     expect(find.text(l10n.errorDivisionByZero), findsOneWidget);
-
-    final CalculatorViewModel vm = Provider.of<CalculatorViewModel>(
-      tester.element(find.byType(CalculatorPage)),
-      listen: false,
-    );
-    vm.toggleProfile();
-    await tester.pumpAndSettle();
     expect(vm.history, isEmpty);
+
+    await tester.tap(find.byKey(const Key('calc.toggle.mode')));
+    await tester.pumpAndSettle();
+    for (final String key in <String>['2', '+', '3', '=']) {
+      await tester.tap(find.byKey(Key('calc.key.$key')));
+      await tester.pumpAndSettle();
+    }
+    expect(
+      tester
+          .widget<SevenSegmentDisplay>(find.byKey(const Key('calc.display')))
+          .text,
+      '5',
+    );
+    expect(vm.history, hasLength(1));
+    expect(vm.history.single.profileId.name, 'scientific');
+    expect((await store.load()).single.result, 5);
+
+    await tester.tap(find.byKey(const Key('calc.toggle.mode')));
+    await tester.pumpAndSettle();
+    expect(vm.history, hasLength(1));
+
+    await tester.tap(find.text(l10n.historyTitle));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('calc.history.0')), findsOneWidget);
   });
 }
 ```
@@ -2140,12 +2232,12 @@ void main() {
 #### T28 — Integración de `CalculatorPage`
 
 - **Archivo principal:** `lib/features/calculator/presentation/calculator_page.dart` (evoluciona el shell existente).
-- **Criterio de aceptación:** la página consume Provider, construye etiquetas desde ARB, pasa el separador y decimales al display/panel y expone las keys `calc.toggle.mode` y `calc.toggle.angle`; el test del slice pasa.
+- **Criterio de aceptación:** la página consume Provider, construye etiquetas desde ARB, pasa el separador y decimales al display/panel y expone las keys `calc.display`, `calc.toggle.mode` y `calc.toggle.angle`; el test del slice pasa.
 - **Código literal:**
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:retro_calculator/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/i18n/error_label.dart';
@@ -2231,7 +2323,10 @@ class _CalculatorPageState extends State<CalculatorPage> {
                   children: <Widget>[
                     Padding(
                       padding: const EdgeInsets.all(12),
-                      child: SevenSegmentDisplay(text: vm.displayText),
+                      child: SevenSegmentDisplay(
+                        key: const Key('calc.display'),
+                        text: vm.displayText,
+                      ),
                     ),
                     if (vm.errorKey != null)
                       Text(
@@ -2299,12 +2394,12 @@ class _CalculatorPageState extends State<CalculatorPage> {
 #### T29 — Cableado de providers y evolución de `app_test.dart`
 
 - **Archivos principales:** `lib/app.dart` (evoluciona) con `test/widget/app_test.dart` (evoluciona) como soporte.
-- **Criterio de aceptación:** `MultiProvider` inyecta `HistoryStore`, `LocalCounters` y `CalculatorViewModel`; se usan delegados/locale de `AppLocalizations`; `routes.dart` sigue intacto; el test de arranque pasa con stores en memoria.
+- **Criterio de aceptación:** `MultiProvider` inyecta `HistoryStore`, `LocalCounters` y `CalculatorViewModel`; el store por defecto compone `SharedPreferencesKeyValueStore.create()` con `SharedPreferencesHistoryStore` (el factory `create()` de la store se eliminó en T19); se usan delegados/locale de `AppLocalizations`; `routes.dart` sigue intacto; el test de arranque pasa con stores en memoria. Ningún archivo fuera de `lib/platform/` importa `package:shared_preferences/...`.
 - **Código literal (`lib/app.dart`):**
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:retro_calculator/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'config/routes.dart';
@@ -2314,6 +2409,7 @@ import 'features/calculator/data/local/history_store.dart';
 import 'features/calculator/data/local/local_counters.dart';
 import 'features/calculator/data/local/shared_preferences_history_store.dart';
 import 'features/calculator/presentation/viewmodels/calculator_view_model.dart';
+import 'platform/preferences/shared_preferences_key_value_store.dart';
 
 class RetroCalculatorApp extends StatelessWidget {
   const RetroCalculatorApp({
@@ -2332,7 +2428,10 @@ class RetroCalculatorApp extends StatelessWidget {
       providers: [
         Provider<HistoryStore>(
           create: (_) =>
-              _historyStore ?? SharedPreferencesHistoryStore.create(),
+              _historyStore ??
+              SharedPreferencesHistoryStore(
+                SharedPreferencesKeyValueStore.create(),
+              ),
         ),
         Provider<LocalCounters>(
           create: (_) => _counters ?? LocalCounters(),
@@ -2366,7 +2465,7 @@ class RetroCalculatorApp extends StatelessWidget {
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:retro_calculator/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:retro_calculator/app.dart';
 import 'package:retro_calculator/features/calculator/data/local/in_memory_history_store.dart';
