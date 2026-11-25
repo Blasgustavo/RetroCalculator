@@ -10,7 +10,7 @@ version: "1.0.0"
 license: Apache-2.0
 metadata:
   author: RetroCalculator
-  usage: { count: 1, last_used: "2026-11-24", success_rate: 1.0 }
+  usage: { count: 2, last_used: "2026-11-25", success_rate: 1.0 }
   dependencies: []
   status: active
   category: flutter
@@ -102,7 +102,11 @@ Fijar una única estructura para que calculadora, skins, monetización y platafo
    - Orden: Android (AdMob + Play Billing) → Windows (sin AdMob/IAP móvil) → iOS (ATT, privacy manifest, IAP de App Store).
    - Builds: `flutter build apk --release`, `flutter build windows`, `flutter build ios`.
 
-6. **Verificación obligatoria**
+6. **Dependencias de herramientas confinadas a `tool/` (verificado el 2026-11-25)**
+
+   Las librerías de edición visual (por ejemplo `fluttercanvas` 0.3.0) se declaran como `dev_dependencies` y **solo se importan desde `tool/`**; nunca desde `lib/`. Su modelo es un formato de autoría temporal: un adaptador con whitelist *deny-by-default* lo convierte a nuestro esquema (`design/app.design.json`), rechazando tipos sin mapeo o con código incrustado. No se usa el renderer ni el exportador Dart del paquete en la app: el preview y la app comparten nuestro renderer, aunque llegue en un slice posterior. Verificado en V0 del Studio con `flutter analyze` 0 issues, 44/44 tests y 8/8 tests del spike.
+
+7. **Verificación obligatoria**
 
    ```bash
    flutter pub get
@@ -112,7 +116,7 @@ Fijar una única estructura para que calculadora, skins, monetización y platafo
    dart format lib test     # formato consistente
    ```
 
-7. **Ejecución en Android con flavors (verificado el 2026-11-24)**
+8. **Ejecución en Android con flavors (verificado el 2026-11-24)**
 
    El proyecto declara flavors Android `dev`, `staging` y `prod` en `android/app/build.gradle.kts`. Sin `--flavor`, `flutter run` genera `app-dev-debug.apk`, `app-staging-debug.apk` y `app-prod-debug.apk`, pero Flutter busca `app-debug.apk` y falla con `Gradle build failed to produce an .apk file`. No es un error de Dart ni del emulador.
 
