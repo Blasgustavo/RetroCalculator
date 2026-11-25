@@ -4,3 +4,8 @@ tool/skins/definitions/lcd_classica.yaml text eol=lf
 
 # La semilla del Studio se escribe con LF canónico (plan V2, T5 y T28).
 design/app.design.json text eol=lf
+
+# Artefactos del compiler v2: LF en todas las plataformas.
+assets/catalog/manifest.v2.json text eol=lf
+lib/core/design_system/generated/*.dart text eol=lf
+lib/features/skins/data/generated/*.dart text eol=lf

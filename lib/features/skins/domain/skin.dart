@@ -19,6 +19,15 @@ class Skin {
   final bool isFree;
   final String source;
 
+  /// Skin generada desde la semilla v2. Aditiva: V9 la activará como default.
+  static const Skin generatedDefault = Skin(
+    id: 'default',
+    nameKey: 'skinDefaultName',
+    tokens: SkinTokens.generatedDefault,
+    isFree: true,
+    source: 'compiled',
+  );
+
   static const Skin classicAmber = Skin(
     id: 'classic_amber',
     nameKey: 'skinClassicName',

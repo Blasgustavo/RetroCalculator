@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+// El compiler v2 emite design_tokens.dart; aquí solo se construye el objeto
+// Flutter. Las reglas de tokens siguen en token_validation.dart.
+import 'generated/design_tokens.dart' as generated;
+
 /// Valores puramente visuales de una skin. Nunca contiene lógica de cálculo.
 @immutable
 class SkinTokens {
@@ -37,7 +41,32 @@ class SkinTokens {
   final double screenPadding;
   final double keyboardHeight;
 
-  /// Tema gratuito heredado. Sus valores son los del MVP antes de las skins.
+  /// Skin `default` de design/app.design.json, generada por el compiler v2.
+  ///
+  /// V9 la activará como default de la app y actualizará los goldens; hoy es
+  /// aditiva para no romper los tests heredados de 44 dp.
+  static const SkinTokens generatedDefault = SkinTokens(
+    segmentOn: Color(generated.generatedDefaultSegmentOn),
+    displayBackground: Color(generated.generatedDefaultDisplayBackground),
+    displayBorder: Color(generated.generatedDefaultDisplayBorder),
+    displayRadius: generated.generatedDefaultDisplayRadius,
+    displayPadding: EdgeInsets.symmetric(
+      horizontal: generated.generatedDefaultDisplayPaddingHorizontal,
+      vertical: generated.generatedDefaultDisplayPaddingVertical,
+    ),
+    digitWidth: generated.generatedDefaultDigitWidth,
+    digitHeight: generated.generatedDefaultDigitHeight,
+    keyBackground: Color(generated.generatedDefaultKeyBackground),
+    keyForeground: Color(generated.generatedDefaultKeyForeground),
+    keyBorder: Color(generated.generatedDefaultKeyBorder),
+    keyRadius: generated.generatedDefaultKeyRadius,
+    keyPadding: generated.generatedDefaultKeyPadding,
+    keyMinHeight: generated.generatedDefaultKeyMinHeight,
+    screenPadding: generated.generatedDefaultScreenPadding,
+    keyboardHeight: generated.generatedDefaultKeyboardHeight,
+  );
+
+  /// Alias temporal del MVP: se conserva en 44 dp hasta V9.
   static const SkinTokens classicAmber = SkinTokens(
     segmentOn: Color(0xFFFFB000),
     displayBackground: Color(0xFF1E1B12),

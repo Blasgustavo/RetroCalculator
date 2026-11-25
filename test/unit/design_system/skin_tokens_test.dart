@@ -24,4 +24,14 @@ void main() {
     expect(tokens.keyBorder, isNull);
     expect(tokens.keyRadius, isNull);
   });
+
+  test('la skin generada usa 48 dp sin reemplazar el alias heredado', () {
+    const SkinTokens generated = SkinTokens.generatedDefault;
+    expect(generated.keyMinHeight, 48);
+    expect(generated.keyBackground, const Color(0xFFE8D9A0));
+    expect(generated.keyForeground, const Color(0xFF1E1B12));
+    expect(generated.segmentOn, const Color(0xFFFFB000));
+    expect(SkinTokens.classicAmber.keyMinHeight, 44);
+    expect(SkinTokens.classicAmber.keyBackground, isNull);
+  });
 }
