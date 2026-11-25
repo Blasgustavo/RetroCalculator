@@ -10,7 +10,7 @@ version: "1.0.0"
 license: Apache-2.0
 metadata:
   author: RetroCalculator
-  usage: { count: 2, last_used: "2026-11-25", success_rate: 1.0 }
+  usage: { count: 3, last_used: "2026-11-25", success_rate: 1.0 }
   dependencies: []
   status: active
   category: flutter
@@ -106,7 +106,11 @@ Fijar una única estructura para que calculadora, skins, monetización y platafo
 
    Las librerías de edición visual (por ejemplo `fluttercanvas` 0.3.0) se declaran como `dev_dependencies` y **solo se importan desde `tool/`**; nunca desde `lib/`. Su modelo es un formato de autoría temporal: un adaptador con whitelist *deny-by-default* lo convierte a nuestro esquema (`design/app.design.json`), rechazando tipos sin mapeo o con código incrustado. No se usa el renderer ni el exportador Dart del paquete en la app: el preview y la app comparten nuestro renderer, aunque llegue en un slice posterior. Verificado en V0 del Studio con `flutter analyze` 0 issues, 44/44 tests y 8/8 tests del spike.
 
-7. **Verificación obligatoria**
+7. **Compiladores de diseño: validar antes de escribir y ser idempotente (verificado el 2026-11-25)**
+
+   Los artefactos generados desde `design/app.design.json` salen de una única fuente de verdad con un gate previo: `dart run tool/design/compile.dart` valida con `validate.dart`/`schema.dart` y **no escribe nada** si la semilla es inválida. La salida es determinista: LF canónico antes de calcular el SHA-256 (mismo bytes en Windows, macOS y CI Linux) y cabecera `// GENERADO: ... No editar a mano.`; dos ejecuciones consecutivas deben dar `git diff --exit-code` limpio. En una migración de formato, el manifiesto v1 que ya consume la app queda intacto y el v2 se emite como archivo nuevo (`manifest.v2.json`); la migración del cliente y del skin default se programa en un slice posterior, con `SkinTokens.generatedDefault` añadido de forma aditiva hasta entonces. `signature` se documenta vacío mientras no exista la clave: nunca se versiona material privado. Verificado en V2 del Studio con 61/61 tests, `flutter analyze` 0 issues y compile idempotente.
+
+8. **Verificación obligatoria**
 
    ```bash
    flutter pub get
@@ -116,7 +120,7 @@ Fijar una única estructura para que calculadora, skins, monetización y platafo
    dart format lib test     # formato consistente
    ```
 
-8. **Ejecución en Android con flavors (verificado el 2026-11-24)**
+9. **Ejecución en Android con flavors (verificado el 2026-11-24)**
 
    El proyecto declara flavors Android `dev`, `staging` y `prod` en `android/app/build.gradle.kts`. Sin `--flavor`, `flutter run` genera `app-dev-debug.apk`, `app-staging-debug.apk` y `app-prod-debug.apk`, pero Flutter busca `app-debug.apk` y falla con `Gradle build failed to produce an .apk file`. No es un error de Dart ni del emulador.
 
@@ -158,6 +162,8 @@ flutter build ios --no-codesign
 - Commitear sin `flutter analyze` y `flutter test` en verde.
 - Ejecutar `flutter run` en Android sin `--flavor` cuando el proyecto declara flavors: genera tres APK con nombre distinto y Flutter no encuentra `app-debug.apk`.
 - Commitear artefactos Windows regenerados por `pub get` en una rama Android-first.
+- Generar artefactos con CRLF en Windows o calcular el checksum después de escribir: el SHA-256 cambia entre plataformas y rompe la idempotencia.
+- Reemplazar en un slice de migración un manifiesto o una skin que ya consume la app: emitir el formato nuevo en paralelo y migrar al cliente en su slice.
 - Copiar convenciones de NestJS, Angular, Leaflet o del dominio FieldOps de ElectroSys.
 
 ## Related Skills

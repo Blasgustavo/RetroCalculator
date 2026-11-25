@@ -10,7 +10,7 @@ version: "1.0.0"
 license: Apache-2.0
 metadata:
   author: RetroCalculator
-  usage: { count: 0, last_used: null, success_rate: 1.0 }
+  usage: { count: 1, last_used: "2026-11-25", success_rate: 1.0 }
   dependencies: [orchestrator-agent, skill-sync, sync-agents, systematic-debugging]
   status: active
   category: meta
