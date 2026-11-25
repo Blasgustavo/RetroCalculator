@@ -122,7 +122,7 @@ Fijar una única estructura para que calculadora, skins, monetización y platafo
 
 9. **Renderer de specs y goldens deterministas (verificado el 2026-11-25)**
 
-   Un renderer que consume `screenSpecs` vive en `lib/core/widgets/` y **no importa `features/`**: recibe un contexto inyectado (`tokens`, display, filas de teclas, callbacks, condición `when`) para evitar dependencias inversas. La whitelist de nodos es deny-by-default y las keys heredadas (`calc.display`, `calc.key.*`, `calc.toggle.angle`, `skin.option.*`) se preservan en el renderer o en los widgets inyectados. Los goldens solo se versionan si son deterministas: fuente `Ahem`, `devicePixelRatio = 1.0`, escala de texto fija y texto ASCII; ejecutar `--update-goldens` dos veces sin diff y verificar los PNG en CI Linux antes de mergear. Verificado en V3 del Studio con 78/78 tests y 9 goldens estables en Windows.
+   Un renderer que consume `screenSpecs` vive en `lib/core/widgets/` y **no importa `features/`**: recibe un contexto inyectado (`tokens`, display, filas de teclas, callbacks, condición `when`) para evitar dependencias inversas. La whitelist de nodos es deny-by-default y las keys heredadas (`calc.display`, `calc.key.*`, `calc.toggle.angle`, `skin.option.*`) se preservan en el renderer o en los widgets inyectados. Los goldens se generan en el **entorno canónico de CI (Ubuntu + Flutter 3.44)**: fijar fuente `Ahem`, `devicePixelRatio = 1.0`, escala de texto y texto ASCII no basta para que Windows y Linux rastericen igual; los PNG creados en Windows fallaron en Linux con diferencias de 0,27 % a 1,03 %. Regenerar con `flutter test --update-goldens` en Linux, verificar que CI quede en verde y no esperar que los mismos PNG pasen en Windows. Verificado en V3 del Studio: 78/78 tests, 9 goldens regenerados en Linux y `Analyze and test` en verde.
 
 10. **Ejecución en Android con flavors (verificado el 2026-11-24)**
 
@@ -167,7 +167,7 @@ flutter build ios --no-codesign
 - Ejecutar `flutter run` en Android sin `--flavor` cuando el proyecto declara flavors: genera tres APK con nombre distinto y Flutter no encuentra `app-debug.apk`.
 - Commitear artefactos Windows regenerados por `pub get` en una rama Android-first.
 - Importar `features/` desde `lib/core/widgets/` en un renderer compartido.
-- Versionar goldens sin fijar fuente, DPR y escala de texto, o mergearlos sin verificarlos en CI Linux.
+- Versionar goldens generados en Windows y darlos por válidos porque pasan localmente: la fuente canónica es CI Linux; regenerar allí y exigir `Analyze and test` en verde.
 - Generar artefactos con CRLF en Windows o calcular el checksum después de escribir: el SHA-256 cambia entre plataformas y rompe la idempotencia.
 - Reemplazar en un slice de migración un manifiesto o una skin que ya consume la app: emitir el formato nuevo en paralelo y migrar al cliente en su slice.
 - Copiar convenciones de NestJS, Angular, Leaflet o del dominio FieldOps de ElectroSys.
