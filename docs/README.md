@@ -19,7 +19,7 @@
   - [MVP Android de la calculadora](plans/2026-11-24-mvp-android-calculator.md)
   - [CI de Android](plans/2026-11-24-android-ci.md)
   - [LCD clásica](plans/2026-11-25-skins-lcd-clasica.md)
-  - [RetroDesign Studio v2](plans/2026-11-24-design-studio-v2.md) — sustituye al plan v1 (`2026-11-24-design-studio-compiler.md`).
+  - [RetroDesign Studio v2](plans/2026-11-24-design-studio-v2.md) — sustituye al [plan v1](plans/2026-11-24-design-studio-compiler.md), que queda como registro histórico; sus identificadores `S7`–`S10` y `D7`–`D10` no se mantienen.
 - [Prompts de mockups](mockups/prompts.md) — pendientes de regenerar por falta de créditos del proveedor de imágenes.
 - [AGENTS.md](../AGENTS.md) — reglas globales del proyecto y tabla de triggers del orquestador.
 

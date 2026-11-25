@@ -20,7 +20,7 @@ El usuario pidió un editor drag-and-drop intuitivo, similar a Figma, y planteó
 ## Consecuencias
 
 - Positivas: una sola tecnología en herramienta y app; preview fiel; sin mantener un fork de otro proyecto; el contrato de datos queda bajo nuestro control.
-- Negativas: dependencia joven con risk de API inestable; hay que escribir y mantener el adaptador; una parte del trabajo del editor es infraestructura de canvas.
+- Negativas: dependencia joven con riesgo de API inestable; hay que escribir y mantener el adaptador; una parte del trabajo del editor es infraestructura de canvas.
 
 ## Alternativas descartadas
 

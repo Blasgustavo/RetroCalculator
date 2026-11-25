@@ -13,7 +13,7 @@ El MVP Android y la skin LCD están mergeados en `main@4dc11fb` con CI verde (`f
 5. El editor debe ser **drag-and-drop intuitivo, similar a Figma**.
 6. La herramienta **publica el catálogo** y configura el **tema visual de los anuncios y la presentación de monetización**.
 
- decisiones load-bearing registradas antes de planificar:
+Decisiones load-bearing registradas antes de planificar:
 
 - **ADR-0004**: el contenido del catálogo es dato, nunca código; el generador emite tokens y manifiesto build-time.
 - **ADR-0007**: perfiles extensibles con `CapabilityRegistry`; parcialmente superado por ADR-0009.
@@ -292,7 +292,7 @@ Orden de ejecución: **V0 → V1 → V2 → V3 → V4 → V5 → V6 → V7 → V
 
 ### V1 — Semilla y validador v2 (T5–T10)
 
-- [ ] **T5 — Semilla.** Crear `design/app.design.json` con el JSON de arriba, LF canónico y tokens vértebra idóneos a LCD. Verificar: `ConvertFrom-Json`/`jsonDecode` válido; 2 skins, 3 pantallas × 3 breakpoints, 3 perfiles, 16 tokens por skin.
+- [ ] **T5 — Semilla.** Crear `design/app.design.json` con el JSON de arriba, LF canónico y tokens idénticos a los de la LCD clásica. Verificar: `ConvertFrom-Json`/`jsonDecode` válido; 2 skins, 3 pantallas × 3 breakpoints, 3 perfiles, 16 tokens por skin.
 - [ ] **T6 — `schema.dart` v2.** Modelos tipados para skins, imágenes, pantallas, perfiles, fórmulas, dimensiones, sonidos, monetización y publicación.
 - [ ] **T7 — Validador.** Reutilizar `validateTokens`, `colorKeys` y `minValues` de `token_validation.dart` para no duplicar reglas. Añadir las validaciones de la sección anterior.
 - [ ] **T8 — CLI.** `dart run tool/design/validate.dart [archivo]` → `✓ válido` o errores numerados con ruta JSON.
