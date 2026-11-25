@@ -10,6 +10,14 @@ abstract interface class SkinManifestSource {
 }
 
 class SkinRepository {
+  /// Base compilada: la LCD clásica consume tokens generados por
+  /// tool/skins/generate.dart. `Skin.generatedDefault` (48 dp) se activa en V9;
+  /// hasta entonces el fallback heredado se mantiene para no romper los tests.
+  static const List<Skin> compiledBase = <Skin>[
+    Skin.classicAmber,
+    Skin.lcdClasica,
+  ];
+
   /// Constructor de T13: base compilada, sin manifiesto ni caché.
   const SkinRepository() : _source = null, _cache = null;
 
@@ -20,7 +28,7 @@ class SkinRepository {
 
   Future<List<Skin>> load() async {
     if (_source == null || _cache == null) {
-      return const <Skin>[Skin.classicAmber, Skin.lcdClasica];
+      return compiledBase;
     }
     SkinManifest? cached;
     try {
@@ -54,7 +62,7 @@ class SkinRepository {
   }
 
   List<Skin> _compiledPlus(SkinManifest? manifest) {
-    final List<Skin> skins = <Skin>[Skin.classicAmber, Skin.lcdClasica];
+    final List<Skin> skins = List<Skin>.from(compiledBase);
     if (manifest == null) return skins;
     for (final SkinManifestEntry entry in manifest.entries) {
       if (skins.any((Skin skin) => skin.id == entry.id)) continue;

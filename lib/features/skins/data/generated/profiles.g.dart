@@ -1,0 +1,56 @@
+// GENERADO: dart run tool/design/compile.dart. No editar a mano.
+/// Perfiles declarativos de la semilla. Sin lógica de cálculo.
+const List<Map<String, Object?>> profileSpecs = <Map<String, Object?>>[
+  {
+    "id": "normal",
+    "labelKey": "modeNormal",
+    "capabilityId": "basic",
+    "isScientific": false,
+    "defaultAngleMode": "degrees",
+    "decimalDigits": 8,
+    "inputs": <Object?>[],
+    "formulas": {},
+    "keyRows": <Object?>[
+      <Object?>["C", "?", "%", "/"],
+      <Object?>["7", "8", "9", "*"],
+      <Object?>["4", "5", "6", "-"],
+      <Object?>["1", "2", "3", "+"],
+      <Object?>["±", "0", ".", "="],
+    ],
+  },
+  {
+    "id": "scientific",
+    "labelKey": "modeScientific",
+    "capabilityId": "scientific",
+    "isScientific": true,
+    "defaultAngleMode": "degrees",
+    "decimalDigits": 8,
+    "inputs": <Object?>[],
+    "formulas": {},
+    "keyRows": <Object?>[
+      <Object?>["sin(", "cos(", "tan(", "(", ")"],
+      <Object?>["ln(", "log(", "√", "^", "!"],
+      <Object?>["pi", "e", "%", "C", "?"],
+      <Object?>["7", "8", "9", "/", "*"],
+      <Object?>["4", "5", "6", "-", "+"],
+      <Object?>["1", "2", "3", "±", "="],
+      <Object?>["0", ".", "MC", "MR", "M+"],
+    ],
+  },
+  {
+    "id": "igv",
+    "labelKey": "modeIgv",
+    "capabilityId": "basic",
+    "isScientific": false,
+    "defaultAngleMode": "degrees",
+    "decimalDigits": 2,
+    "inputs": <Object?>["base", "tasa"],
+    "formulas": {"resultado": "base * (1 + tasa / 100)"},
+    "keyRows": <Object?>[
+      <Object?>["7", "8", "9", "C"],
+      <Object?>["4", "5", "6", "?"],
+      <Object?>["1", "2", "3", "="],
+      <Object?>["0", ".", "tasa", "base"],
+    ],
+  },
+];
