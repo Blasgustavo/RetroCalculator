@@ -139,6 +139,28 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get skinResetLabel => 'Restaurar tema';
+
+  @override
+  String get skinDefaultName => 'Âmbar clássico';
+
+  @override
+  String get modeIgv => 'IGV';
+
+  @override
+  String get adsRewardCopy =>
+      'Assista a um anúncio recompensado para renovar sua skin';
+
+  @override
+  String get priceSkin => 'Preço da skin';
+
+  @override
+  String get priceCalculator => 'Preço da calculadora';
+
+  @override
+  String get priceMonthly => 'Preço mensal';
+
+  @override
+  String get priceYearly => 'Preço anual';
 }
 
 /// The translations for Portuguese, as used in Brazil (`pt_BR`).
@@ -276,4 +298,26 @@ class AppLocalizationsPtBr extends AppLocalizationsPt {
 
   @override
   String get skinResetLabel => 'Restaurar tema';
+
+  @override
+  String get skinDefaultName => 'Âmbar clássico';
+
+  @override
+  String get modeIgv => 'IGV';
+
+  @override
+  String get adsRewardCopy =>
+      'Assista a um anúncio recompensado para renovar sua skin';
+
+  @override
+  String get priceSkin => 'Preço da skin';
+
+  @override
+  String get priceCalculator => 'Preço da calculadora';
+
+  @override
+  String get priceMonthly => 'Preço mensal';
+
+  @override
+  String get priceYearly => 'Preço anual';
 }

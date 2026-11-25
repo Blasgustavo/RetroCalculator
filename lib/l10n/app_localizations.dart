@@ -365,6 +365,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset theme'**
   String get skinResetLabel;
+
+  /// No description provided for @skinDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'Classic amber'**
+  String get skinDefaultName;
+
+  /// No description provided for @modeIgv.
+  ///
+  /// In en, this message translates to:
+  /// **'IGV'**
+  String get modeIgv;
+
+  /// No description provided for @adsRewardCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch a rewarded ad to renew your skin'**
+  String get adsRewardCopy;
+
+  /// No description provided for @priceSkin.
+  ///
+  /// In en, this message translates to:
+  /// **'Skin price'**
+  String get priceSkin;
+
+  /// No description provided for @priceCalculator.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculator price'**
+  String get priceCalculator;
+
+  /// No description provided for @priceMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly price'**
+  String get priceMonthly;
+
+  /// No description provided for @priceYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly price'**
+  String get priceYearly;
 }
 
 class _AppLocalizationsDelegate

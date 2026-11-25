@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('los cinco ARB tienen exactamente las mismas 44 claves', () {
+  test('los cinco ARB tienen exactamente las mismas 51 claves', () {
     const List<String> files = <String>[
       'app_en.arb',
       'app_es.arb',
@@ -21,6 +21,6 @@ void main() {
     for (final Set<String> keys in keySets) {
       expect(keys, keySets.first);
     }
-    expect(keySets.first, hasLength(44));
+    expect(keySets.first, hasLength(51));
   });
 }

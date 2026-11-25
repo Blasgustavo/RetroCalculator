@@ -139,6 +139,28 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get skinResetLabel => 'Restablecer tema';
+
+  @override
+  String get skinDefaultName => 'Ámbar clásico';
+
+  @override
+  String get modeIgv => 'IGV';
+
+  @override
+  String get adsRewardCopy =>
+      'Mira un anuncio recompensado para renovar tu skin';
+
+  @override
+  String get priceSkin => 'Precio de la skin';
+
+  @override
+  String get priceCalculator => 'Precio de la calculadora';
+
+  @override
+  String get priceMonthly => 'Precio mensual';
+
+  @override
+  String get priceYearly => 'Precio anual';
 }
 
 /// The translations for Spanish Castilian, as used in Peru (`es_PE`).
@@ -276,4 +298,26 @@ class AppLocalizationsEsPe extends AppLocalizationsEs {
 
   @override
   String get skinResetLabel => 'Restablecer tema';
+
+  @override
+  String get skinDefaultName => 'Ámbar clásico';
+
+  @override
+  String get modeIgv => 'IGV';
+
+  @override
+  String get adsRewardCopy =>
+      'Mira un anuncio recompensado para renovar tu skin';
+
+  @override
+  String get priceSkin => 'Precio de la skin';
+
+  @override
+  String get priceCalculator => 'Precio de la calculadora';
+
+  @override
+  String get priceMonthly => 'Precio mensual';
+
+  @override
+  String get priceYearly => 'Precio anual';
 }
