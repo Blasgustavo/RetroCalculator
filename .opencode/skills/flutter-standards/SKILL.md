@@ -10,7 +10,7 @@ version: "1.0.0"
 license: Apache-2.0
 metadata:
   author: RetroCalculator
-  usage: { count: 3, last_used: "2026-11-25", success_rate: 1.0 }
+  usage: { count: 4, last_used: "2026-11-25", success_rate: 1.0 }
   dependencies: []
   status: active
   category: flutter
@@ -120,7 +120,11 @@ Fijar una única estructura para que calculadora, skins, monetización y platafo
    dart format lib test     # formato consistente
    ```
 
-9. **Ejecución en Android con flavors (verificado el 2026-11-24)**
+9. **Renderer de specs y goldens deterministas (verificado el 2026-11-25)**
+
+   Un renderer que consume `screenSpecs` vive en `lib/core/widgets/` y **no importa `features/`**: recibe un contexto inyectado (`tokens`, display, filas de teclas, callbacks, condición `when`) para evitar dependencias inversas. La whitelist de nodos es deny-by-default y las keys heredadas (`calc.display`, `calc.key.*`, `calc.toggle.angle`, `skin.option.*`) se preservan en el renderer o en los widgets inyectados. Los goldens solo se versionan si son deterministas: fuente `Ahem`, `devicePixelRatio = 1.0`, escala de texto fija y texto ASCII; ejecutar `--update-goldens` dos veces sin diff y verificar los PNG en CI Linux antes de mergear. Verificado en V3 del Studio con 78/78 tests y 9 goldens estables en Windows.
+
+10. **Ejecución en Android con flavors (verificado el 2026-11-24)**
 
    El proyecto declara flavors Android `dev`, `staging` y `prod` en `android/app/build.gradle.kts`. Sin `--flavor`, `flutter run` genera `app-dev-debug.apk`, `app-staging-debug.apk` y `app-prod-debug.apk`, pero Flutter busca `app-debug.apk` y falla con `Gradle build failed to produce an .apk file`. No es un error de Dart ni del emulador.
 
@@ -162,6 +166,8 @@ flutter build ios --no-codesign
 - Commitear sin `flutter analyze` y `flutter test` en verde.
 - Ejecutar `flutter run` en Android sin `--flavor` cuando el proyecto declara flavors: genera tres APK con nombre distinto y Flutter no encuentra `app-debug.apk`.
 - Commitear artefactos Windows regenerados por `pub get` en una rama Android-first.
+- Importar `features/` desde `lib/core/widgets/` en un renderer compartido.
+- Versionar goldens sin fijar fuente, DPR y escala de texto, o mergearlos sin verificarlos en CI Linux.
 - Generar artefactos con CRLF en Windows o calcular el checksum después de escribir: el SHA-256 cambia entre plataformas y rompe la idempotencia.
 - Reemplazar en un slice de migración un manifiesto o una skin que ya consume la app: emitir el formato nuevo en paralelo y migrar al cliente en su slice.
 - Copiar convenciones de NestJS, Angular, Leaflet o del dominio FieldOps de ElectroSys.
