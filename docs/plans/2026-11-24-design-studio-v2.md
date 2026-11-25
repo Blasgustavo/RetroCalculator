@@ -21,6 +21,7 @@ Decisiones load-bearing registradas antes de planificar:
 - **ADR-0009**: fórmulas declarativas con variables, parseadas por el motor; sin `eval`.
 - **ADR-0010**: publicación remota versionada y firmada; supera el «backend diferido» solo para catálogo, no para entitlements.
 - **ADR-0011**: editor visual sobre base Dart (`fluttercanvas`) + adaptador a nuestro esquema; **sin fork** de Penpot/Figma.
+- **ADR-0012**: claves ARB en camelCase y placeholders versionados para los assets de la semilla.
 
 Sobre «¿lo soporta nativamente?»: Flutter no trae un editor tipo Figma en el SDK, solo gestos y `CustomPainter`. Se eligió un spike con `fluttercanvas` (MIT, v0.3.0) como base del canvas, con un adaptador a `design/app.design.json`. El preview y la app comparten **nuestro** `SpecRenderer`; el exportador Dart y el renderer del paquete no se usan. Si el spike falla por inmadurez del paquete, se cae a un canvas propio mínimo con el mismo contrato (ADR-0011).
 
@@ -255,12 +256,14 @@ lib/features/calculator/domain/    ← VariableNode + evaluate(variables) (ADR-0
   "dimensions": {"minTouchTarget": 48, "breakpoints": {"mobile": 0, "tablet": 600, "desktop": 1024}},
   "sounds": {"enabled": true, "events": {"keyTap": "key_tap.wav", "equals": "equals.wav", "error": "error.wav", "skinChange": "skin_change.wav"}},
   "monetization": {
-    "ads": {"type": "rewarded", "enabled": true, "theme": {"buttonBackground": "#FFB000", "buttonForeground": "#1E1B12", "copyKey": "ads.reward.copy"}},
-    "catalog": {"productIds": {"skinLcdClassica": "skin_lcd_classica", "calculatorPro": "calculator_pro_30d", "subscriptionMonthly": "retro_calculator_monthly", "subscriptionYearly": "retro_calculator_yearly"}, "priceCopyKeys": {"skin": "price.skin", "calculator": "price.calculator", "monthly": "price.monthly", "yearly": "price.yearly"}}
+    "ads": {"type": "rewarded", "enabled": true, "theme": {"buttonBackground": "#FFB000", "buttonForeground": "#1E1B12", "copyKey": "adsRewardCopy"}},
+    "catalog": {"productIds": {"skinLcdClassica": "skin_lcd_classica", "calculatorPro": "calculator_pro_30d", "subscriptionMonthly": "retro_calculator_monthly", "subscriptionYearly": "retro_calculator_yearly"}, "priceCopyKeys": {"skin": "priceSkin", "calculator": "priceCalculator", "monthly": "priceMonthly", "yearly": "priceYearly"}}
   },
   "publishing": {"channel": "prod", "baseUrl": "https://catalog.example.com/retro", "publicKey": "RELLENAR_CON_LA_CLAVE_PUBLICA_FIJADA"}
 }
 ```
+
+> **Corrección ADR-0012:** las siete claves ARB nuevas van en camelCase (`skinDefaultName`, `modeIgv`, `adsRewardCopy`, `priceSkin`, `priceCalculator`, `priceMonthly`, `priceYearly`) porque `flutter gen-l10n` rechaza los puntos en los nombres de recurso. Se añaden a los cinco ARB (44 → 51) y se actualiza `arb_keys_test.dart`. Los cinco assets referenciados existen como placeholders versionados en `design/assets/`; V6 y V10 los regeneran con el mismo nombre.
 
 **Whitelist de nodos**: `padding`, `display`, `errorText`, `row`, `column`, `sizedBox`, `keyboard`, `key`, `image`, `history`, `skinSelector`, `angleChip`. Cualquier otro tipo se rechaza. Las keys de test (`calc.display`, `calc.key.*`, `calc.toggle.*`, `skin.option.*`) se conservan.
 

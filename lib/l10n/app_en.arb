@@ -42,5 +42,12 @@
   "skinSelectorTitle": "Skin selector",
   "skinClassicName": "Classic amber",
   "skinLcdClassicaName": "Classic LCD",
-  "skinResetLabel": "Reset theme"
+  "skinResetLabel": "Reset theme",
+  "skinDefaultName": "Classic amber",
+  "modeIgv": "IGV",
+  "adsRewardCopy": "Watch a rewarded ad to renew your skin",
+  "priceSkin": "Skin price",
+  "priceCalculator": "Calculator price",
+  "priceMonthly": "Monthly price",
+  "priceYearly": "Yearly price"
 }

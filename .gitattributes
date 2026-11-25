@@ -1,3 +1,6 @@
 # Flutter regenera estos archivos con LF en todas las plataformas.
 windows/flutter/generated_* text eol=lf
 tool/skins/definitions/lcd_classica.yaml text eol=lf
+
+# La semilla del Studio se escribe con LF canónico (plan V2, T5 y T28).
+design/app.design.json text eol=lf

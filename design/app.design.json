@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 2,
+  "version": 1,
+  "channels": ["prod", "beta"],
+  "skins": [
+    {
+      "id": "default",
+      "nameKey": "skinDefaultName",
+      "isDefault": true,
+      "tokens": {
+        "segmentOn": "#FFB000",
+        "displayBackground": "#1E1B12",
+        "displayBorder": "#3A3320",
+        "displayRadius": 8,
+        "displayPaddingHorizontal": 16,
+        "displayPaddingVertical": 12,
+        "digitWidth": 26,
+        "digitHeight": 48,
+        "keyBackground": "#E8D9A0",
+        "keyForeground": "#1E1B12",
+        "keyBorder": "#3A3320",
+        "keyRadius": 6,
+        "keyPadding": 3,
+        "keyMinHeight": 48,
+        "screenPadding": 12,
+        "keyboardHeight": 380
+      },
+      "images": ["fondo_panel"]
+    },
+    {
+      "id": "lcd_classica",
+      "nameKey": "skinLcdClassicaName",
+      "isDefault": false,
+      "tokens": {
+        "segmentOn": "#B8E986",
+        "displayBackground": "#1E2A1F",
+        "displayBorder": "#3A3320",
+        "displayRadius": 8,
+        "displayPaddingHorizontal": 16,
+        "displayPaddingVertical": 12,
+        "digitWidth": 26,
+        "digitHeight": 48,
+        "keyBackground": "#E8F0D6",
+        "keyForeground": "#1E2A1F",
+        "keyBorder": "#4F6F52",
+        "keyRadius": 6,
+        "keyPadding": 3,
+        "keyMinHeight": 48,
+        "screenPadding": 12,
+        "keyboardHeight": 380
+      },
+      "images": []
+    }
+  ],
+  "images": [
+    {
+      "id": "fondo_panel",
+      "file": "fondo_panel.png",
+      "format": "png",
+      "maxWidth": 2048,
+      "maxHeight": 2048,
+      "checksum": "RELLENAR_POR_EL_COMPILER"
+    }
+  ],
+  "screens": {
+    "normal": {
+      "mobile": [{"type": "padding", "value": 12, "child": {"type": "display", "key": "calc.display"}}, {"type": "errorText", "when": "hasError"}, {"type": "sizedBox", "height": 380, "child": {"type": "keyboard", "key": "calc.keyboard"}}, {"type": "history", "titleKey": "historyTitle"}, {"type": "skinSelector"}],
+      "tablet": [{"type": "padding", "value": 16, "child": {"type": "display", "key": "calc.display"}}, {"type": "errorText", "when": "hasError"}, {"type": "sizedBox", "height": 420, "child": {"type": "keyboard", "key": "calc.keyboard"}}, {"type": "history", "titleKey": "historyTitle"}, {"type": "skinSelector"}],
+      "desktop": [{"type": "padding", "value": 20, "child": {"type": "display", "key": "calc.display"}}, {"type": "errorText", "when": "hasError"}, {"type": "sizedBox", "height": 460, "child": {"type": "keyboard", "key": "calc.keyboard"}}, {"type": "history", "titleKey": "historyTitle"}, {"type": "skinSelector"}]
+    },
+    "scientific": {
+      "mobile": [{"type": "padding", "value": 12, "child": {"type": "display", "key": "calc.display"}}, {"type": "row", "alignment": "center", "when": "isScientific", "children": [{"type": "angleChip", "key": "calc.toggle.angle"}]}, {"type": "sizedBox", "height": 380, "child": {"type": "keyboard", "key": "calc.keyboard"}}, {"type": "history", "titleKey": "historyTitle"}],
+      "tablet": [{"type": "padding", "value": 16, "child": {"type": "display", "key": "calc.display"}}, {"type": "row", "alignment": "center", "when": "isScientific", "children": [{"type": "angleChip", "key": "calc.toggle.angle"}]}, {"type": "sizedBox", "height": 420, "child": {"type": "keyboard", "key": "calc.keyboard"}}, {"type": "history", "titleKey": "historyTitle"}],
+      "desktop": [{"type": "padding", "value": 20, "child": {"type": "display", "key": "calc.display"}}, {"type": "row", "alignment": "center", "when": "isScientific", "children": [{"type": "angleChip", "key": "calc.toggle.angle"}]}, {"type": "sizedBox", "height": 460, "child": {"type": "keyboard", "key": "calc.keyboard"}}, {"type": "history", "titleKey": "historyTitle"}]
+    },
+    "selector": {
+      "mobile": [{"type": "skinSelector"}],
+      "tablet": [{"type": "skinSelector"}],
+      "desktop": [{"type": "skinSelector"}]
+    }
+  },
+  "profiles": [
+    {"id": "normal", "labelKey": "modeNormal", "capabilityId": "basic", "isScientific": false, "defaultAngleMode": "degrees", "decimalDigits": 8, "inputs": [], "formulas": {}, "keyRows": [["C", "?", "%", "/"], ["7", "8", "9", "*"], ["4", "5", "6", "-"], ["1", "2", "3", "+"], ["±", "0", ".", "="]]},
+    {"id": "scientific", "labelKey": "modeScientific", "capabilityId": "scientific", "isScientific": true, "defaultAngleMode": "degrees", "decimalDigits": 8, "inputs": [], "formulas": {}, "keyRows": [["sin(", "cos(", "tan(", "(", ")"], ["ln(", "log(", "√", "^", "!"], ["pi", "e", "%", "C", "?"], ["7", "8", "9", "/", "*"], ["4", "5", "6", "-", "+"], ["1", "2", "3", "±", "="], ["0", ".", "MC", "MR", "M+"]]},
+    {"id": "igv", "labelKey": "modeIgv", "capabilityId": "basic", "isScientific": false, "defaultAngleMode": "degrees", "decimalDigits": 2, "inputs": ["base", "tasa"], "formulas": {"resultado": "base * (1 + tasa / 100)"}, "keyRows": [["7", "8", "9", "C"], ["4", "5", "6", "?"], ["1", "2", "3", "="], ["0", ".", "tasa", "base"]]}
+  ],
+  "dimensions": {"minTouchTarget": 48, "breakpoints": {"mobile": 0, "tablet": 600, "desktop": 1024}},
+  "sounds": {"enabled": true, "events": {"keyTap": "key_tap.wav", "equals": "equals.wav", "error": "error.wav", "skinChange": "skin_change.wav"}},
+  "monetization": {
+    "ads": {"type": "rewarded", "enabled": true, "theme": {"buttonBackground": "#FFB000", "buttonForeground": "#1E1B12", "copyKey": "adsRewardCopy"}},
+    "catalog": {"productIds": {"skinLcdClassica": "skin_lcd_classica", "calculatorPro": "calculator_pro_30d", "subscriptionMonthly": "retro_calculator_monthly", "subscriptionYearly": "retro_calculator_yearly"}, "priceCopyKeys": {"skin": "priceSkin", "calculator": "priceCalculator", "monthly": "priceMonthly", "yearly": "priceYearly"}}
+  },
+  "publishing": {"channel": "prod", "baseUrl": "https://catalog.example.com/retro", "publicKey": "RELLENAR_CON_LA_CLAVE_PUBLICA_FIJADA"}
+}

@@ -139,4 +139,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get skinResetLabel => 'Reset theme';
+
+  @override
+  String get skinDefaultName => 'Classic amber';
+
+  @override
+  String get modeIgv => 'IGV';
+
+  @override
+  String get adsRewardCopy => 'Watch a rewarded ad to renew your skin';
+
+  @override
+  String get priceSkin => 'Skin price';
+
+  @override
+  String get priceCalculator => 'Calculator price';
+
+  @override
+  String get priceMonthly => 'Monthly price';
+
+  @override
+  String get priceYearly => 'Yearly price';
 }

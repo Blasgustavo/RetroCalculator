@@ -42,5 +42,12 @@
   "skinSelectorTitle": "Selector de skins",
   "skinClassicName": "Ámbar clásico",
   "skinLcdClassicaName": "LCD clásica",
-  "skinResetLabel": "Restablecer tema"
+  "skinResetLabel": "Restablecer tema",
+  "skinDefaultName": "Ámbar clásico",
+  "modeIgv": "IGV",
+  "adsRewardCopy": "Mira un anuncio recompensado para renovar tu skin",
+  "priceSkin": "Precio de la skin",
+  "priceCalculator": "Precio de la calculadora",
+  "priceMonthly": "Precio mensual",
+  "priceYearly": "Precio anual"
 }
