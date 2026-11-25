@@ -9,6 +9,8 @@ import 'features/calculator/data/local/history_store.dart';
 import 'features/calculator/data/local/local_counters.dart';
 import 'features/calculator/data/local/shared_preferences_history_store.dart';
 import 'features/calculator/presentation/viewmodels/calculator_view_model.dart';
+import 'features/skins/data/local/skin_cache.dart';
+import 'features/skins/data/remote/asset_manifest_source.dart';
 import 'features/skins/data/skin_repository.dart';
 import 'features/skins/presentation/skin_controller.dart';
 import 'features/skins/presentation/skin_scope.dart';
@@ -43,7 +45,12 @@ class RetroCalculatorApp extends StatelessWidget {
             context.read<LocalCounters>(),
           ),
         ),
-        Provider<SkinRepository>(create: (_) => const SkinRepository()),
+        Provider<SkinRepository>(
+          create: (_) => SkinRepository.remote(
+            const AssetManifestSource('assets/catalog/manifest.json'),
+            SkinCache(SharedPreferencesKeyValueStore.create()),
+          ),
+        ),
         ChangeNotifierProvider<SkinController>(create: (_) => SkinController()),
       ],
       child: Builder(
