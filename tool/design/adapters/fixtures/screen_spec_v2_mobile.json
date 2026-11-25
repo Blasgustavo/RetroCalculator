@@ -1,0 +1,42 @@
+{
+  "mobile": [
+    {
+      "type": "padding",
+      "value": 12,
+      "child": {
+        "type": "display",
+        "key": "calc.display"
+      }
+    },
+    {
+      "type": "errorText",
+      "when": "hasError"
+    },
+    {
+      "type": "row",
+      "alignment": "center",
+      "when": "isScientific",
+      "children": [
+        {
+          "type": "angleChip",
+          "key": "calc.toggle.angle"
+        }
+      ]
+    },
+    {
+      "type": "sizedBox",
+      "height": 380,
+      "child": {
+        "type": "keyboard",
+        "key": "calc.keyboard"
+      }
+    },
+    {
+      "type": "history",
+      "titleKey": "historyTitle"
+    },
+    {
+      "type": "skinSelector"
+    }
+  ]
+}
