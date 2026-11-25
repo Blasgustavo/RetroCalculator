@@ -127,6 +127,18 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get errorNonFiniteResult => 'Resultado no finito';
+
+  @override
+  String get skinSelectorTitle => 'Selector de skins';
+
+  @override
+  String get skinClassicName => 'Ámbar clásico';
+
+  @override
+  String get skinLcdClassicaName => 'LCD clásica';
+
+  @override
+  String get skinResetLabel => 'Restablecer tema';
 }
 
 /// The translations for Spanish Castilian, as used in Peru (`es_PE`).
@@ -252,4 +264,16 @@ class AppLocalizationsEsPe extends AppLocalizationsEs {
 
   @override
   String get errorNonFiniteResult => 'Resultado no finito';
+
+  @override
+  String get skinSelectorTitle => 'Selector de skins';
+
+  @override
+  String get skinClassicName => 'Ámbar clásico';
+
+  @override
+  String get skinLcdClassicaName => 'LCD clásica';
+
+  @override
+  String get skinResetLabel => 'Restablecer tema';
 }

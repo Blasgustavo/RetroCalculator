@@ -127,6 +127,18 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get errorNonFiniteResult => 'Resultado não finito';
+
+  @override
+  String get skinSelectorTitle => 'Seletor de skins';
+
+  @override
+  String get skinClassicName => 'Âmbar clássico';
+
+  @override
+  String get skinLcdClassicaName => 'LCD clássica';
+
+  @override
+  String get skinResetLabel => 'Restaurar tema';
 }
 
 /// The translations for Portuguese, as used in Brazil (`pt_BR`).
@@ -252,4 +264,16 @@ class AppLocalizationsPtBr extends AppLocalizationsPt {
 
   @override
   String get errorNonFiniteResult => 'Resultado não finito';
+
+  @override
+  String get skinSelectorTitle => 'Seletor de skins';
+
+  @override
+  String get skinClassicName => 'Âmbar clássico';
+
+  @override
+  String get skinLcdClassicaName => 'LCD clássica';
+
+  @override
+  String get skinResetLabel => 'Restaurar tema';
 }

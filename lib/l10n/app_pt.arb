@@ -38,5 +38,9 @@
   "errorInvalidNumber": "Número inválido",
   "errorUnbalancedParentheses": "Parênteses desbalanceados",
   "errorEmptyExpression": "Expressão vazia",
-  "errorNonFiniteResult": "Resultado não finito"
+  "errorNonFiniteResult": "Resultado não finito",
+  "skinSelectorTitle": "Seletor de skins",
+  "skinClassicName": "Âmbar clássico",
+  "skinLcdClassicaName": "LCD clássica",
+  "skinResetLabel": "Restaurar tema"
 }

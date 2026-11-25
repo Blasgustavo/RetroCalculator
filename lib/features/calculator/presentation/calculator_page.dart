@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:retro_calculator/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/design_system/skin_tokens.dart';
+import '../../../features/skins/presentation/skin_scope.dart';
+import '../../../features/skins/presentation/skin_selector.dart';
 import '../../../core/i18n/error_label.dart';
 import '../../../core/i18n/locale_resolver.dart';
 import '../../../core/i18n/number_formatting.dart';
@@ -58,6 +61,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context)!;
     final CalculatorViewModel vm = context.watch<CalculatorViewModel>();
+    final SkinTokens tokens = SkinScope.tokensOf(context);
     final DecimalSeparator separator = separatorForLocale(
       LocaleResolver.name(Localizations.localeOf(context)),
     );
@@ -85,10 +89,11 @@ class _CalculatorPageState extends State<CalculatorPage> {
                 child: Column(
                   children: <Widget>[
                     Padding(
-                      padding: const EdgeInsets.all(12),
+                      padding: EdgeInsets.all(tokens.screenPadding),
                       child: SevenSegmentDisplay(
                         key: const Key('calc.display'),
                         text: vm.displayText,
+                        tokens: tokens,
                       ),
                     ),
                     if (vm.errorKey != null)
@@ -120,13 +125,14 @@ class _CalculatorPageState extends State<CalculatorPage> {
                         ),
                       ),
                     SizedBox(
-                      height: 380,
+                      height: tokens.keyboardHeight,
                       child: Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(tokens.screenPadding),
                         child: CalculatorKeyboard(
                           rows: vm.profile.keyRows,
                           labels: _labels(l10n),
                           onKeyTap: vm.input,
+                          tokens: tokens,
                         ),
                       ),
                     ),
@@ -140,6 +146,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
                         ),
                       ],
                     ),
+                    const SkinSelector(),
                   ],
                 ),
               ),

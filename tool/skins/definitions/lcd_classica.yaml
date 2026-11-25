@@ -1,0 +1,28 @@
+schemaVersion: 1
+id: lcd_classica
+version: 1
+nameKey: skinLcdClassicaName
+rewardDurationHours: 24
+source: compiled
+capabilities: []
+modules:
+  palette:
+    segmentOn: '#B8E986'
+    displayBackground: '#1E2A1F'
+    displayBorder: '#3A3320'
+    keyBackground: '#E8F0D6'
+    keyForeground: '#1E2A1F'
+    keyBorder: '#4F6F52'
+  display:
+    digitWidth: 26
+    digitHeight: 48
+    radius: 8
+    paddingHorizontal: 16
+    paddingVertical: 12
+  buttons:
+    radius: 6
+    padding: 3
+    minHeight: 48
+  shell:
+    screenPadding: 12
+    keyboardHeight: 380

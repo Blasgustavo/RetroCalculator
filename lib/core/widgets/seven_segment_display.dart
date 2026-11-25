@@ -1,28 +1,26 @@
 import 'package:flutter/material.dart';
 
+import '../design_system/skin_tokens.dart';
+
 class SevenSegmentDisplay extends StatelessWidget {
   const SevenSegmentDisplay({
     super.key,
     required this.text,
-    this.digitWidth = 26,
-    this.digitHeight = 48,
-    this.color = const Color(0xFFFFB000),
+    this.tokens = SkinTokens.classicAmber,
   });
 
   final String text;
-  final double digitWidth;
-  final double digitHeight;
-  final Color color;
+  final SkinTokens tokens;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: tokens.displayPadding,
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1B12),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF3A3320)),
+        color: tokens.displayBackground,
+        borderRadius: BorderRadius.circular(tokens.displayRadius),
+        border: Border.all(color: tokens.displayBorder),
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
@@ -30,13 +28,13 @@ class SevenSegmentDisplay extends StatelessWidget {
         child: CustomPaint(
           painter: _SevenSegmentPainter(
             text: text,
-            digitWidth: digitWidth,
-            digitHeight: digitHeight,
-            color: color,
+            digitWidth: tokens.digitWidth,
+            digitHeight: tokens.digitHeight,
+            color: tokens.segmentOn,
           ),
           size: Size(
-            digitWidth * (text.isEmpty ? 1 : text.length),
-            digitHeight,
+            tokens.digitWidth * (text.isEmpty ? 1 : text.length),
+            tokens.digitHeight,
           ),
         ),
       ),

@@ -38,5 +38,9 @@
   "errorInvalidNumber": "Invalid number",
   "errorUnbalancedParentheses": "Unbalanced parentheses",
   "errorEmptyExpression": "Empty expression",
-  "errorNonFiniteResult": "Non-finite result"
+  "errorNonFiniteResult": "Non-finite result",
+  "skinSelectorTitle": "Skin selector",
+  "skinClassicName": "Classic amber",
+  "skinLcdClassicaName": "Classic LCD",
+  "skinResetLabel": "Reset theme"
 }

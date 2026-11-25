@@ -127,4 +127,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorNonFiniteResult => 'Non-finite result';
+
+  @override
+  String get skinSelectorTitle => 'Skin selector';
+
+  @override
+  String get skinClassicName => 'Classic amber';
+
+  @override
+  String get skinLcdClassicaName => 'Classic LCD';
+
+  @override
+  String get skinResetLabel => 'Reset theme';
 }
