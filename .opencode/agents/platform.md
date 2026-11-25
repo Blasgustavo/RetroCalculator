@@ -30,6 +30,8 @@ Soy el subagente de plataforma. Trabajo en `lib/platform/` y en las carpetas nat
 - El resto del código importa solo la interfaz en `lib/platform/`; prohibidos los imports directos de plugins nativos fuera de ahí.
 - Cambios nativos mínimos y documentados; cualquier permiso nuevo se justifica y se registra si es una decisión load-bearing.
 - Verificar `flutter analyze` y `flutter test` tras cada adaptación y, cuando aplique, el build de la plataforma correspondiente.
+- Para ejecutar en Android con los flavors `dev`/`staging`/`prod` declarados en el proyecto, pasar siempre `--flavor` a `flutter run` (por ejemplo `flutter run -d <id> --flavor prod`); sin él Gradle genera APK con sufijo y Flutter no encuentra `app-debug.apk`.
+- Tras `flutter pub get`, restaurar los artefactos Windows generados (`git restore -- windows/flutter/`) mientras la fase activa sea Android; Windows llegará después según ADR-0002.
 
 ## Reglas
 

@@ -10,7 +10,7 @@ version: "1.0.0"
 license: Apache-2.0
 metadata:
   author: RetroCalculator
-  usage: { count: 0, last_used: null, success_rate: 1.0 }
+  usage: { count: 1, last_used: "2026-11-24", success_rate: 1.0 }
   dependencies: []
   status: active
   category: flutter
@@ -112,6 +112,17 @@ Fijar una única estructura para que calculadora, skins, monetización y platafo
    dart format lib test     # formato consistente
    ```
 
+7. **Ejecución en Android con flavors (verificado el 2026-11-24)**
+
+   El proyecto declara flavors Android `dev`, `staging` y `prod` en `android/app/build.gradle.kts`. Sin `--flavor`, `flutter run` genera `app-dev-debug.apk`, `app-staging-debug.apk` y `app-prod-debug.apk`, pero Flutter busca `app-debug.apk` y falla con `Gradle build failed to produce an .apk file`. No es un error de Dart ni del emulador.
+
+   ```bash
+   flutter devices                      # identificar el id del emulador
+   flutter run -d emulator-5554 --flavor prod
+   ```
+
+   Con `flutter pub get` en este entorno se regeneran `windows/flutter/generated_plugin_registrant.{cc,h}` y `generated_plugins.cmake`. Windows es fase 2 (ADR-0002): restaurarlos con `git restore -- windows/flutter/` antes de committear. El usuario validó manualmente el MVP en Android con este comando el 2026-11-24: `2 + 3 = 5`, modo científico e historial global.
+
 ## Commands
 
 ```bash
@@ -141,6 +152,8 @@ flutter build ios --no-codesign
 - Llamar a AdMob, Google Play Billing o complementos nativos desde `presentation/` sin pasar por `lib/platform/`.
 - Añadir banners o intersticiales, o exigir un anuncio para calcular.
 - Commitear sin `flutter analyze` y `flutter test` en verde.
+- Ejecutar `flutter run` en Android sin `--flavor` cuando el proyecto declara flavors: genera tres APK con nombre distinto y Flutter no encuentra `app-debug.apk`.
+- Commitear artefactos Windows regenerados por `pub get` en una rama Android-first.
 - Copiar convenciones de NestJS, Angular, Leaflet o del dominio FieldOps de ElectroSys.
 
 ## Related Skills
