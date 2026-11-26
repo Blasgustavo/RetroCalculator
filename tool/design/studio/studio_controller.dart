@@ -21,6 +21,8 @@ import '../validate.dart' show ValidationIssue;
 import 'studio_apply.dart' show StudioApplyResult, applyStudioDocument;
 import 'studio_formula_validation.dart';
 import 'studio_geometry.dart';
+import 'studio_persistence.dart'
+    show StudioSaveResult, loadStudioDocumentFromDisk, saveStudioDocument;
 
 /// Ruta relativa al directorio de trabajo (la raíz del proyecto cuando se
 /// lanza con `flutter run -t tool/design/studio/main.dart`).
@@ -231,6 +233,12 @@ Map<String, Map<String, Set<String>>> _copyFlags(
 typedef StudioApplyCallback =
     StudioApplyResult Function(DesignSeed document, {required bool write});
 
+/// Guardar persiste el documento sin validarlo ni compilarlo (T28).
+typedef StudioSaveCallback = StudioSaveResult Function(DesignSeed document);
+
+/// Recargar sustituye el documento abierto por lo que hay en disco (T28).
+typedef StudioReloadCallback = DesignSeed Function();
+
 /// Callback real contra disco, ligado a la ruta del documento abierto.
 StudioApplyCallback _diskApplyCallback(String designPath) =>
     (DesignSeed document, {required bool write}) => applyStudioDocument(
@@ -240,6 +248,19 @@ StudioApplyCallback _diskApplyCallback(String designPath) =>
       write: write,
     );
 
+StudioSaveCallback _diskSaveCallback(String designPath) =>
+    (DesignSeed document) => saveStudioDocument(
+      document,
+      projectRoot: Directory.current,
+      designPath: designPath,
+    );
+
+StudioReloadCallback _diskReloadCallback(String designPath) =>
+    () => loadStudioDocumentFromDisk(
+      projectRoot: Directory.current,
+      designPath: designPath,
+    );
+
 class StudioController extends ChangeNotifier {
   StudioController({
     required DesignSeed document,
@@ -247,6 +268,8 @@ class StudioController extends ChangeNotifier {
     String? breakpoint,
     String designPath = studioDefaultDesignPath,
     StudioApplyCallback? applyCallback,
+    StudioSaveCallback? saveCallback,
+    StudioReloadCallback? reloadCallback,
   }) : _document = document,
        _designPath = designPath,
        _screen = screen != null && document.screens.containsKey(screen)
@@ -262,7 +285,9 @@ class StudioController extends ChangeNotifier {
        _selectedProfileId = document.profiles.isEmpty
            ? null
            : document.profiles.first.id,
-       _applyCallback = applyCallback ?? _diskApplyCallback(designPath);
+       _applyCallback = applyCallback ?? _diskApplyCallback(designPath),
+       _saveCallback = saveCallback ?? _diskSaveCallback(designPath),
+       _reloadCallback = reloadCallback ?? _diskReloadCallback(designPath);
 
   DesignSeed _document;
 
@@ -271,6 +296,15 @@ class StudioController extends ChangeNotifier {
 
   /// Único punto de aplicación; inyectable para probar la UI sin disco.
   final StudioApplyCallback _applyCallback;
+
+  /// Puntos de persistencia; inyectables para probar la UI sin disco.
+  final StudioSaveCallback _saveCallback;
+  final StudioReloadCallback _reloadCallback;
+
+  /// Último guardado y su mensaje legible; `null` antes de la primera acción.
+  StudioSaveResult? _lastSaveResult;
+  String? _persistenceStatus;
+
   String _screen;
   String _breakpoint;
   String _selectedNodePath = '';
@@ -311,6 +345,12 @@ class StudioController extends ChangeNotifier {
 
   /// Ruta del documento abierto, usada por el callback real de aplicación.
   String get designPath => _designPath;
+
+  /// Resultado del último Guardar; no forma parte del documento ni del undo.
+  StudioSaveResult? get lastSaveResult => _lastSaveResult;
+
+  /// Último mensaje de Guardar/Recargar, listo para mostrar en la herramienta.
+  String? get persistenceStatus => _persistenceStatus;
 
   /// Pantallas del documento, en orden del JSON.
   List<String> get screens => _document.screens.keys.toList();
@@ -1220,6 +1260,30 @@ class StudioController extends ChangeNotifier {
   void applyDocument() {
     lastApplyResult = _applyCallback(document, write: true);
     notifyListeners();
+  }
+
+  // ---------------------------------------------------------------------------
+  // T28 — persistencia: Guardar/Recargar, fuera del documento y del undo
+  // ---------------------------------------------------------------------------
+
+  /// Guarda el documento actual. No valida, no compila y no es una edición:
+  /// no entra en el snapshot ni en el historial.
+  void saveDocument() {
+    final StudioSaveResult result = _saveCallback(document);
+    _lastSaveResult = result;
+    _persistenceStatus = 'Guardado: ${result.path} (${result.bytes} bytes)';
+    notifyListeners();
+  }
+
+  /// Recarga desde disco y sustituye el documento abierto. `loadDocument` ya
+  /// limpia undo/redo, selección y estado de edición; aquí se descarta además
+  /// el resultado de Validar/Aplicar anterior, que ya no describe el documento
+  /// abierto. Un fallo de carga se propaga sin tocar el estado ni notificar.
+  void reloadDocument() {
+    final DesignSeed loaded = _reloadCallback();
+    lastApplyResult = null;
+    _persistenceStatus = 'Recargado: $_designPath';
+    loadDocument(loaded);
   }
 
   /// Sustituye el documento abierto, vuelve a la selección inicial y limpia
