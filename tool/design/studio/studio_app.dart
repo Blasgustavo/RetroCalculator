@@ -10,8 +10,10 @@
 import 'package:flutter/material.dart';
 import 'package:retro_calculator/core/widgets/spec_renderer.dart';
 
+import '../artifacts.dart' show designNodeToJson;
 import '../schema.dart';
 import 'studio_controller.dart';
+import 'studio_geometry.dart';
 
 const List<String> _studioActions = <String>[
   'Guardar',
@@ -27,17 +29,20 @@ const List<String> _studioActions = <String>[
 /// no puede importar nada fuera de `lib/` y el shell necesita `DesignSeed` de
 /// `tool/design/schema.dart`.
 class StudioApp extends StatelessWidget {
-  const StudioApp({super.key, this.document});
+  const StudioApp({super.key, this.document, this.controller});
 
   /// Documento inyectado por los tests; en la app real se lee de disco.
   final DesignSeed? document;
+
+  /// Controlador inyectado por los tests de interacción (opcional).
+  final StudioController? controller;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'RetroDesign Studio',
-      home: StudioShell(document: document),
+      home: StudioShell(document: document, controller: controller),
     );
   }
 }
@@ -48,10 +53,12 @@ class StudioShell extends StatefulWidget {
     super.key,
     this.document,
     this.designPath = studioDefaultDesignPath,
+    this.controller,
   });
 
   final DesignSeed? document;
   final String designPath;
+  final StudioController? controller;
 
   @override
   State<StudioShell> createState() => _StudioShellState();
@@ -59,18 +66,22 @@ class StudioShell extends StatefulWidget {
 
 class _StudioShellState extends State<StudioShell> {
   late final StudioController _controller;
+  late final bool _ownsController;
 
   @override
   void initState() {
     super.initState();
-    _controller = StudioController(
-      document: widget.document ?? loadStudioDocument(widget.designPath),
-    );
+    _ownsController = widget.controller == null;
+    _controller =
+        widget.controller ??
+        StudioController(
+          document: widget.document ?? loadStudioDocument(widget.designPath),
+        );
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    if (_ownsController) _controller.dispose();
     super.dispose();
   }
 
@@ -263,6 +274,8 @@ class _CanvasPanel extends StatelessWidget {
             List<dynamic> rejectedData,
           ) {
             final bool hovering = candidateData.isNotEmpty;
+            final Size frame = controller.frame;
+            final StudioGeometry? selected = controller.selectedGeometry;
             return DecoratedBox(
               key: const Key('studio.canvas.dropZone'),
               decoration: BoxDecoration(
@@ -277,13 +290,222 @@ class _CanvasPanel extends StatelessWidget {
                 ),
               ),
               child: SingleChildScrollView(
-                child: SpecRenderer(
-                  nodes: controller.currentSpec,
-                  renderContext: const SpecRenderContext(),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    key: const Key('studio.canvas.frame'),
+                    width: frame.width,
+                    height: frame.height,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: <Widget>[
+                        const Positioned.fill(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                right: BorderSide(color: Color(0xFFB0BEC5)),
+                                bottom: BorderSide(color: Color(0xFFB0BEC5)),
+                              ),
+                            ),
+                          ),
+                        ),
+                        for (int i = 0; i < controller.currentNodes.length; i++)
+                          _NodeBox(
+                            path: '$i',
+                            node: controller.currentNodes[i],
+                            controller: controller,
+                          ),
+                        // Las manillas son hermanas de las cajas, no hijas:
+                        // así su gesto de resize no compite con el de mover.
+                        if (selected != null &&
+                            controller.selectedNodePath.isNotEmpty)
+                          for (final StudioResizeHandle handle
+                              in StudioResizeHandle.values)
+                            _ResizeHandle(
+                              path: controller.selectedNodePath,
+                              handle: handle,
+                              geometry: selected,
+                              controller: controller,
+                            ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             );
           },
+    );
+  }
+}
+
+/// Caja interactiva de un nodo: selecciona al pulsar y mueve con el puntero.
+///
+/// Se usa `Listener` en lugar de `GestureDetector` porque el canvas tiene un
+/// `SingleChildScrollView`: su recognizer de arrastre ganaría la arena y
+/// cancelaría el `onPanUpdate` de la caja. Los eventos crudos llegan a todos los
+/// listeners y el delta se calcula en coordenadas globales (inmune al
+/// desplazamiento del propio nodo mientras se arrastra).
+class _NodeBox extends StatefulWidget {
+  const _NodeBox({
+    required this.path,
+    required this.node,
+    required this.controller,
+  });
+
+  final String path;
+  final DesignNode node;
+  final StudioController controller;
+
+  @override
+  State<_NodeBox> createState() => _NodeBoxState();
+}
+
+class _NodeBoxState extends State<_NodeBox> {
+  Offset? _lastPosition;
+
+  @override
+  Widget build(BuildContext context) {
+    final StudioGeometry geometry = widget.controller.geometryOf(widget.path)!;
+    final bool selected = widget.controller.selectedNodePath == widget.path;
+    return Positioned(
+      left: geometry.x,
+      top: geometry.y,
+      width: geometry.width,
+      height: geometry.height,
+      child: Listener(
+        key: Key('studio.node.${widget.path}'),
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (PointerDownEvent event) {
+          _lastPosition = event.position;
+          widget.controller.selectNode(widget.path);
+        },
+        onPointerMove: (PointerMoveEvent event) {
+          final Offset? last = _lastPosition;
+          if (last == null) return;
+          final Offset delta = event.position - last;
+          _lastPosition = event.position;
+          widget.controller.moveNode(widget.path, dx: delta.dx, dy: delta.dy);
+        },
+        onPointerUp: (PointerUpEvent event) => _lastPosition = null,
+        onPointerCancel: (PointerCancelEvent event) => _lastPosition = null,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: selected
+                  ? const Color(0xFF00695C)
+                  : const Color(0xFF90A4AE),
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: ClipRect(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: geometry.width,
+                child: SpecRenderer(
+                  nodes: <Object?>[designNodeToJson(widget.node)],
+                  renderContext: const SpecRenderContext(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Manilla de resize de una de las ocho posiciones del rectángulo.
+class _ResizeHandle extends StatefulWidget {
+  const _ResizeHandle({
+    required this.path,
+    required this.handle,
+    required this.geometry,
+    required this.controller,
+  });
+
+  static const double size = 12;
+
+  final String path;
+  final StudioResizeHandle handle;
+  final StudioGeometry geometry;
+  final StudioController controller;
+
+  @override
+  State<_ResizeHandle> createState() => _ResizeHandleState();
+}
+
+class _ResizeHandleState extends State<_ResizeHandle> {
+  Offset? _lastPosition;
+
+  Offset get _anchor => switch (widget.handle) {
+    StudioResizeHandle.topLeft => Offset(widget.geometry.x, widget.geometry.y),
+    StudioResizeHandle.top => Offset(
+      widget.geometry.x + widget.geometry.width / 2,
+      widget.geometry.y,
+    ),
+    StudioResizeHandle.topRight => Offset(
+      widget.geometry.x + widget.geometry.width,
+      widget.geometry.y,
+    ),
+    StudioResizeHandle.right => Offset(
+      widget.geometry.x + widget.geometry.width,
+      widget.geometry.y + widget.geometry.height / 2,
+    ),
+    StudioResizeHandle.bottomRight => Offset(
+      widget.geometry.x + widget.geometry.width,
+      widget.geometry.y + widget.geometry.height,
+    ),
+    StudioResizeHandle.bottom => Offset(
+      widget.geometry.x + widget.geometry.width / 2,
+      widget.geometry.y + widget.geometry.height,
+    ),
+    StudioResizeHandle.bottomLeft => Offset(
+      widget.geometry.x,
+      widget.geometry.y + widget.geometry.height,
+    ),
+    StudioResizeHandle.left => Offset(
+      widget.geometry.x,
+      widget.geometry.y + widget.geometry.height / 2,
+    ),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: _anchor.dx - _ResizeHandle.size / 2,
+      top: _anchor.dy - _ResizeHandle.size / 2,
+      width: _ResizeHandle.size,
+      height: _ResizeHandle.size,
+      child: Listener(
+        key: Key('studio.handle.${widget.path}.${widget.handle.name}'),
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (PointerDownEvent event) =>
+            _lastPosition = event.position,
+        onPointerMove: (PointerMoveEvent event) {
+          final Offset? last = _lastPosition;
+          if (last == null) return;
+          final Offset delta = event.position - last;
+          _lastPosition = event.position;
+          widget.controller.resizeNode(
+            widget.path,
+            widget.handle,
+            dx: delta.dx,
+            dy: delta.dy,
+          );
+        },
+        onPointerUp: (PointerUpEvent event) => _lastPosition = null,
+        onPointerCancel: (PointerCancelEvent event) => _lastPosition = null,
+        child: const DecoratedBox(
+          decoration: BoxDecoration(
+            color: Color(0xFF00695C),
+            border: Border.fromBorderSide(
+              BorderSide(color: Colors.white, width: 1),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
