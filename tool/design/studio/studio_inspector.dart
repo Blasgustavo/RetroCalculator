@@ -125,8 +125,19 @@ class _NodePropertyFieldState extends State<_NodePropertyField> {
   late final TextEditingController _text = TextEditingController(
     text: _externalText(),
   );
-  late final FocusNode _focus = FocusNode();
+  late final FocusNode _focus = FocusNode()..addListener(_onFocusChange);
   String? _error;
+
+  /// T26: una sesión de escritura es una sola entrada del historial.
+  void _onFocusChange() {
+    if (_focus.hasFocus) {
+      widget.controller.beginInteraction(
+        'node:${widget.path}:${widget.property}',
+      );
+    } else {
+      widget.controller.endInteraction();
+    }
+  }
 
   String _externalText() {
     final DesignNode? node = widget.controller.selectedNode;
@@ -152,6 +163,7 @@ class _NodePropertyFieldState extends State<_NodePropertyField> {
 
   @override
   void dispose() {
+    if (_focus.hasFocus) widget.controller.endInteraction();
     _text.dispose();
     _focus.dispose();
     super.dispose();
@@ -315,7 +327,18 @@ class _TokenFieldState extends State<_TokenField> {
   late final TextEditingController _text = TextEditingController(
     text: widget.value?.toString() ?? '',
   );
-  late final FocusNode _focus = FocusNode();
+  late final FocusNode _focus = FocusNode()..addListener(_onFocusChange);
+
+  /// T26: agrupa todas las escrituras del campo en una sola entrada.
+  void _onFocusChange() {
+    if (_focus.hasFocus) {
+      widget.controller.beginInteraction(
+        'token:${widget.skinId}:${widget.tokenKey}',
+      );
+    } else {
+      widget.controller.endInteraction();
+    }
+  }
 
   @override
   void didUpdateWidget(covariant _TokenField oldWidget) {
@@ -332,6 +355,7 @@ class _TokenFieldState extends State<_TokenField> {
 
   @override
   void dispose() {
+    if (_focus.hasFocus) widget.controller.endInteraction();
     _text.dispose();
     _focus.dispose();
     super.dispose();
@@ -390,7 +414,18 @@ class _FormulaSectionState extends State<_FormulaSection> {
     _text = TextEditingController(
       text: _name == null ? '' : widget.profile!.formulas[_name]!,
     );
-    _focus = FocusNode();
+    _focus = FocusNode()..addListener(_onFocusChange);
+  }
+
+  /// T26: agrupa todas las escrituras de la fórmula en una sola entrada.
+  void _onFocusChange() {
+    if (_focus.hasFocus) {
+      widget.controller.beginInteraction(
+        'formula:${widget.profile?.id ?? ''}:${_name ?? ''}',
+      );
+    } else {
+      widget.controller.endInteraction();
+    }
   }
 
   @override
@@ -409,6 +444,7 @@ class _FormulaSectionState extends State<_FormulaSection> {
 
   @override
   void dispose() {
+    if (_focus.hasFocus) widget.controller.endInteraction();
     _text.dispose();
     _focus.dispose();
     super.dispose();
