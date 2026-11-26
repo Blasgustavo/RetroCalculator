@@ -145,3 +145,4 @@ ADR-0009 define fórmulas declarativas con `inputs` y un mapa `formulas`, sin `e
 - El helper no debe ejecutar la fórmula: solo parsear y recorrer el AST (ADR-0004).
 - `VariableNode extends ConstantNode`: el orden del switch es la corrección; cualquier nuevo case debe poner `VariableNode` primero.
 - Windows: no regenerar los 9 goldens canónicos de Linux; verificar solo `test/unit test/widget`.
+- Deuda diferida a T34: la validación build-time no comprueba `capability.operators`; una fórmula con `^` o `!` en un perfil `basic` puede pasar el gate y fallar en runtime con `unsupportedOperator`. No se añade `operators` a la API del helper en T33 para no ampliar el alcance del slice.

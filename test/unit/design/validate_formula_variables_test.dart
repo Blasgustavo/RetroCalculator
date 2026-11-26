@@ -46,6 +46,29 @@ void main() {
     expect(result.dependencies, isEmpty);
   });
 
+  test('un input que comparte nombre con otra fórmula no crea dependencia', () {
+    final FormulaValidation result = comprobar(
+      'base',
+      inputs: const <String>['base'],
+      formulaNames: const <String>{'base'},
+    );
+
+    expect(result.isValid, isTrue, reason: mensajes(result).toString());
+    expect(result.dependencies, isEmpty);
+  });
+
+  test('un input que comparte nombre con la fórmula no es recursivo', () {
+    final FormulaValidation result = comprobar(
+      'base',
+      name: 'base',
+      inputs: const <String>['base'],
+      formulaNames: const <String>{'base'},
+    );
+
+    expect(result.isValid, isTrue, reason: mensajes(result).toString());
+    expect(mensajes(result), isNot(contains('fórmula recursiva: base')));
+  });
+
   test('rechaza entradas que colisionan al normalizar, en cualquier orden', () {
     for (final List<String> inputs in <List<String>>[
       <String>['Base', 'BASE'],
@@ -130,5 +153,26 @@ void main() {
       issues.map((ValidationIssue issue) => issue.message),
       contains(contains('duplicateVariable')),
     );
+  });
+
+  test('validaJson informa una sola vez varias colisiones de inputs', () {
+    final File seedFile = File('design/app.design.json');
+    final Map<String, Object?> json =
+        jsonDecode(seedFile.readAsStringSync()) as Map<String, Object?>;
+    final Map<String, Object?> profile =
+        (json['profiles']! as List<Object?>)[2] as Map<String, Object?>;
+    profile['inputs'] = <String>['a', 'A', 'b', 'B'];
+
+    final List<ValidationIssue> issues = validateJson(
+      json,
+      projectRoot: Directory.current,
+      assetsRoot: Directory('design${Platform.pathSeparator}assets'),
+    );
+    final List<ValidationIssue> duplicates = issues
+        .where((ValidationIssue issue) => issue.path == 'profiles[2].inputs')
+        .toList();
+
+    expect(duplicates, hasLength(1));
+    expect(duplicates.single.message, contains('duplicateVariable'));
   });
 }

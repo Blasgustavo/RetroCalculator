@@ -433,7 +433,7 @@ void _validateProfiles(DesignSeed design, List<ValidationIssue> issues) {
       );
     }
     final String inputsPath = 'profiles[$i].inputs';
-    final Set<String> reportedDuplicates = <String>{};
+    final Set<String> reportedDuplicateCodes = <String>{};
     for (final MapEntry<String, String> formula in profile.formulas.entries) {
       final String path = 'profiles[$i].formulas.${formula.key}';
       formulaPaths[formula.key] = path;
@@ -447,7 +447,7 @@ void _validateProfiles(DesignSeed design, List<ValidationIssue> issues) {
             .toSet(),
         path: path,
         inputsPath: inputsPath,
-        reportedDuplicates: reportedDuplicates,
+        reportedDuplicateCodes: reportedDuplicateCodes,
         issues: issues,
       );
     }
@@ -466,7 +466,7 @@ Set<String> _validateFormula({
   required Set<String> formulaNames,
   required String path,
   required String inputsPath,
-  required Set<String> reportedDuplicates,
+  required Set<String> reportedDuplicateCodes,
   required List<ValidationIssue> issues,
 }) {
   final FormulaValidation result = validateFormula(
@@ -480,8 +480,9 @@ Set<String> _validateFormula({
   for (final FormulaIssue issue in result.issues) {
     if (issue.code == 'duplicateVariable') {
       // La colisión es del array de entradas, no de una fórmula concreta: se
-      // informa una sola vez en la ruta del perfil (ADR-0016).
-      if (!reportedDuplicates.add(issue.message)) continue;
+      // informa una sola vez por perfil y código, aunque colisionen varias
+      // entradas con mensajes distintos (ADR-0016).
+      if (!reportedDuplicateCodes.add(issue.code)) continue;
       issues.add(ValidationIssue(inputsPath, issue.message));
     } else {
       issues.add(ValidationIssue(path, issue.message));

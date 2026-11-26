@@ -10,7 +10,6 @@ import 'package:retro_calculator/features/calculator/domain/capabilities/capabil
 import 'package:retro_calculator/features/calculator/domain/capabilities/scientific_capability.dart';
 
 import '../formula_validation.dart';
-export '../formula_validation.dart' show maxFormulaLength;
 
 /// Errores legibles para una fórmula, sin evaluarla numéricamente.
 List<String> validateStudioFormula({
