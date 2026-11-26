@@ -26,11 +26,17 @@ class Parser {
 
   /// Los identificadores declarados se resuelven como variables; el resto
   /// siguen siendo constantes para no romper `pi`/`e` ni el modo normal.
+  /// La búsqueda normaliza las claves para que un `Parser` construido
+  /// directamente también acepte mapas con casing mixto.
   ExprNode _identifier(String lexeme) {
     final String name = lexeme.toLowerCase();
     final Map<String, num>? declared = variables;
-    if (declared != null && declared.containsKey(name)) {
-      return VariableNode(name);
+    if (declared != null) {
+      for (final String key in declared.keys) {
+        if (key.toLowerCase() == name) {
+          return VariableNode(name);
+        }
+      }
     }
     return ConstantNode(name);
   }

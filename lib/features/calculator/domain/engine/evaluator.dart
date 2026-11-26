@@ -35,6 +35,8 @@ class Evaluator {
 
   /// `null` mantiene el modo calculadora clásico; un mapa (incluso vacío)
   /// activa el modo fórmula, donde todo id desconocido es `unknownVariable`.
+  /// El motor entrega las claves ya normalizadas a minúsculas; la consulta
+  /// también las normaliza para quien construya el evaluador directamente.
   final Map<String, num>? variables;
 
   double evaluate(ExprNode node) => _evaluate(node, _EvaluationBudget());
@@ -87,8 +89,9 @@ class Evaluator {
 
   double _variable(String name) {
     final Map<String, num>? declared = variables;
-    if (declared != null && declared.containsKey(name)) {
-      return declared[name]!.toDouble();
+    final String key = name.toLowerCase();
+    if (declared != null && declared.containsKey(key)) {
+      return declared[key]!.toDouble();
     }
     throw const CalculatorException('unknownVariable');
   }

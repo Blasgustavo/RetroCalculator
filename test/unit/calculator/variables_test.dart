@@ -92,6 +92,26 @@ void main() {
     );
   });
 
+  test('rechaza claves que colisionan al normalizar a minúsculas', () {
+    // El orden de entrada no debe decidir el ganador: ambas son inválidas.
+    expect(
+      () => engine.evaluate(
+        'base',
+        normal,
+        variables: <String, num>{'Base': 1, 'BASE': 2},
+      ),
+      throwsCode('duplicateVariable'),
+    );
+    expect(
+      () => engine.evaluate(
+        'base',
+        normal,
+        variables: <String, num>{'BASE': 2, 'Base': 1},
+      ),
+      throwsCode('duplicateVariable'),
+    );
+  });
+
   test('rechaza identificadores con caracteres no ASCII según el lexer', () {
     expect(
       () =>

@@ -20,10 +20,7 @@ class CalculatorEngine {
     // antes de que el parser decida qué identificadores son variables.
     final Map<String, num>? declaredVariables = variables == null
         ? null
-        : <String, num>{
-            for (final MapEntry<String, num> entry in variables.entries)
-              entry.key.toLowerCase(): entry.value,
-          };
+        : _normalizedVariables(variables);
     final List<Token> tokens = const Lexer().tokenize(expression);
     final ExprNode tree = Parser(tokens, variables: declaredVariables).parse();
     final double result = Evaluator(
@@ -35,5 +32,19 @@ class CalculatorEngine {
       throw const CalculatorException('nonFiniteResult');
     }
     return result;
+  }
+
+  /// Normaliza a minúsculas sin dejar que el orden de entrada decida el valor:
+  /// dos claves que solo difieran en caso son una declaración ambigua.
+  static Map<String, num> _normalizedVariables(Map<String, num> variables) {
+    final Map<String, num> normalized = <String, num>{};
+    for (final MapEntry<String, num> entry in variables.entries) {
+      final String key = entry.key.toLowerCase();
+      if (normalized.containsKey(key)) {
+        throw const CalculatorException('duplicateVariable');
+      }
+      normalized[key] = entry.value;
+    }
+    return normalized;
   }
 }
