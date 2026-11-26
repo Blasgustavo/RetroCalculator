@@ -2,9 +2,9 @@
 //
 // `StudioController` es el único dueño del documento abierto: la paleta, el
 // canvas, el panel de capas y el inspector leen de aquí y escuchan sus
-// cambios. No conoce widgets ni red: los slices siguientes (drag & drop,
-// capas reordenables, inspector, undo/redo y persistencia) se añaden como
-// métodos nuevos sobre este mismo estado, sin romper este contrato.
+// cambios. No conoce widgets ni red: los slices siguientes (capas
+// reordenables, inspector, undo/redo y persistencia) se añaden como métodos
+// nuevos sobre este mismo estado, sin romper este contrato.
 
 import 'dart:convert';
 import 'dart:io';
@@ -115,6 +115,25 @@ class StudioController extends ChangeNotifier {
     _breakpoint = value;
     _selectedNodePath = '';
     notifyListeners();
+  }
+
+  /// Añade un nodo de [type] al final del breakpoint actual, lo selecciona
+  /// (para que aparezca en capas e inspector) y devuelve su ruta.
+  ///
+  /// Deny-by-default: si [type] no pertenece a `designNodeTypes` o la
+  /// pantalla/breakpoint actual no existe en el documento, no se muta nada y
+  /// se devuelve `null`.
+  String? addNode(String type) {
+    if (!designNodeTypes.contains(type)) return null;
+    final Map<String, List<DesignNode>>? breakpoints =
+        _document.screens[_screen];
+    if (breakpoints == null) return null;
+    final List<DesignNode> nodes = breakpoints[_breakpoint] ??= <DesignNode>[];
+    final String path = '${nodes.length}';
+    nodes.add(DesignNode(type: type));
+    _selectedNodePath = path;
+    notifyListeners();
+    return path;
   }
 
   void selectNode(String path) {
