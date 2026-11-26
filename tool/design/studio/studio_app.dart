@@ -14,6 +14,7 @@ import '../artifacts.dart' show designNodeToJson;
 import '../schema.dart';
 import 'studio_controller.dart';
 import 'studio_geometry.dart';
+import 'studio_inspector.dart';
 
 const List<String> _studioActions = <String>[
   'Guardar',
@@ -118,8 +119,8 @@ class _StudioShellState extends State<StudioShell> {
                     ),
                     const Divider(height: 1),
                     SizedBox(
-                      height: 160,
-                      child: _InspectorPanel(
+                      height: 320,
+                      child: StudioInspectorPanel(
                         key: const Key('studio.inspector'),
                         controller: _controller,
                       ),
@@ -675,50 +676,6 @@ class _LayersPanel extends StatelessWidget {
       rows.addAll(_rows(controller, children, path, depth + 1));
     }
     return rows;
-  }
-}
-
-class _InspectorPanel extends StatelessWidget {
-  const _InspectorPanel({super.key, required this.controller});
-
-  final StudioController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final DesignNode? node = controller.selectedNode;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        const Padding(
-          padding: EdgeInsets.all(8),
-          child: Text(
-            'Inspector',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
-        const Divider(height: 1),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(8),
-            child: node == null
-                ? const Text('Selecciona un nodo')
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text('Tipo: ${node.type}'),
-                      if (node.key != null) Text('Key: ${node.key}'),
-                      if (node.titleKey != null)
-                        Text('Title: ${node.titleKey}'),
-                      if (node.value != null) Text('Value: ${node.value}'),
-                      if (node.height != null) Text('Height: ${node.height}'),
-                      if (node.alignment != null)
-                        Text('Alignment: ${node.alignment}'),
-                    ],
-                  ),
-          ),
-        ),
-      ],
-    );
   }
 }
 
