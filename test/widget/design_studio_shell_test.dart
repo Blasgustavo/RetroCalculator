@@ -57,6 +57,21 @@ const String _seedJson = r'''
 
 DesignSeed _seed() => DesignSeed.fromJson(jsonDecode(_seedJson));
 
+/// Semilla con un nodo `padding` de hijo único (`display`) para cubrir la ruta
+/// de capas `0.c`, que no es un índice de `children`.
+DesignSeed _seedWithChild() {
+  final Object? root = jsonDecode(_seedJson);
+  final Map<String, Object?> screens =
+      (root as Map<String, Object?>)['screens'] as Map<String, Object?>;
+  final Map<String, Object?> normal = screens['normal'] as Map<String, Object?>;
+  final List<Object?> mobile = normal['mobile'] as List<Object?>;
+  mobile.insert(0, <String, Object?>{
+    'type': 'padding',
+    'child': <String, Object?>{'type': 'display', 'key': 'calc.display'},
+  });
+  return DesignSeed.fromJson(root);
+}
+
 const Key _paletteKey = Key('studio.palette');
 const Key _canvasKey = Key('studio.canvas');
 const Key _layersKey = Key('studio.layers');
@@ -203,6 +218,44 @@ void main() {
       find.descendant(
         of: find.byKey(_layersKey),
         matching: find.text('history capa.mobile'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('las capas seleccionan un nodo con hijo único', (
+    WidgetTester tester,
+  ) async {
+    final DesignSeed document = _seedWithChild();
+    await tester.pumpWidget(StudioApp(document: document));
+
+    // Fila del hijo único: la ruta debe ser `0.c`, sin índice espurio.
+    expect(
+      studioNodeAtPath(document.screens['normal']!['mobile']!, '0.c')?.type,
+      'display',
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(_layersKey),
+        matching: find.text('display calc.display'),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('display calc.display'));
+    await tester.pump();
+
+    expect(
+      find.descendant(
+        of: find.byKey(_inspectorKey),
+        matching: find.text('Tipo: display'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(_inspectorKey),
+        matching: find.text('Key: calc.display'),
       ),
       findsOneWidget,
     );

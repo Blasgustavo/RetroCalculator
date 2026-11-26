@@ -270,6 +270,8 @@ class _LayersPanel extends StatelessWidget {
     );
   }
 
+  /// Filas de un nivel del árbol: la ruta de cada nodo se resuelve con su
+  /// índice dentro del nivel (`'$basePath.$i'` o `'$i'` en la raíz).
   List<Widget> _rows(
     StudioController controller,
     List<DesignNode> nodes,
@@ -278,27 +280,36 @@ class _LayersPanel extends StatelessWidget {
   ) {
     final List<Widget> rows = <Widget>[];
     for (int i = 0; i < nodes.length; i++) {
-      final DesignNode node = nodes[i];
       final String path = basePath.isEmpty ? '$i' : '$basePath.$i';
-      rows.add(
-        ListTile(
-          dense: true,
-          contentPadding: EdgeInsets.only(left: 8 + depth * 12, right: 8),
-          selected: controller.selectedNodePath == path,
-          onTap: () => controller.selectNode(path),
-          title: Text(studioNodeLabel(node)),
-        ),
-      );
-      final DesignNode? child = node.child;
-      if (child != null) {
-        rows.addAll(
-          _rows(controller, <DesignNode>[child], '$path.c', depth + 1),
-        );
-      }
-      final List<DesignNode>? children = node.children;
-      if (children != null) {
-        rows.addAll(_rows(controller, children, path, depth + 1));
-      }
+      rows.addAll(_nodeRows(controller, nodes[i], path, depth));
+    }
+    return rows;
+  }
+
+  /// Fila de un nodo con su ruta ya resuelta y las de sus descendientes:
+  /// `child` único → `'$path.c'`, `children[i]` → `'$path.$i'`.
+  List<Widget> _nodeRows(
+    StudioController controller,
+    DesignNode node,
+    String path,
+    int depth,
+  ) {
+    final List<Widget> rows = <Widget>[
+      ListTile(
+        dense: true,
+        contentPadding: EdgeInsets.only(left: 8 + depth * 12, right: 8),
+        selected: controller.selectedNodePath == path,
+        onTap: () => controller.selectNode(path),
+        title: Text(studioNodeLabel(node)),
+      ),
+    ];
+    final DesignNode? child = node.child;
+    if (child != null) {
+      rows.addAll(_nodeRows(controller, child, '$path.c', depth + 1));
+    }
+    final List<DesignNode>? children = node.children;
+    if (children != null) {
+      rows.addAll(_rows(controller, children, path, depth + 1));
     }
     return rows;
   }
