@@ -8,6 +8,7 @@
 // motor de cálculo ni `lib/features/`.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:retro_calculator/core/widgets/spec_renderer.dart';
 
 import '../artifacts.dart' show designNodeToJson;
@@ -22,6 +23,41 @@ const List<String> _studioActions = <String>[
   'Compilar',
   'Publicar',
 ];
+
+/// Intents propios: `UndoIntent`/`RedoIntent` pertenecen a los `TextField` y
+/// envolverlos aquí haría que Ctrl+Z del editor competiera con el deshacer
+/// nativo del texto. Al ser tipos distintos, cada action responde solo a sus
+/// atajos del Studio.
+class StudioUndoIntent extends Intent {
+  const StudioUndoIntent();
+}
+
+class StudioRedoIntent extends Intent {
+  const StudioRedoIntent();
+}
+
+/// Ctrl/Cmd+Z deshace; Ctrl/Cmd+Shift+Z y Ctrl/Cmd+Y rehacen.
+final Map<ShortcutActivator, Intent> studioShortcuts =
+    <ShortcutActivator, Intent>{
+      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyZ):
+          const StudioUndoIntent(),
+      LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.keyZ):
+          const StudioUndoIntent(),
+      LogicalKeySet(
+        LogicalKeyboardKey.control,
+        LogicalKeyboardKey.shift,
+        LogicalKeyboardKey.keyZ,
+      ): const StudioRedoIntent(),
+      LogicalKeySet(
+        LogicalKeyboardKey.meta,
+        LogicalKeyboardKey.shift,
+        LogicalKeyboardKey.keyZ,
+      ): const StudioRedoIntent(),
+      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyY):
+          const StudioRedoIntent(),
+      LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.keyY):
+          const StudioRedoIntent(),
+    };
 
 /// Aplicación aislada del Studio: se lanza con
 /// `flutter run -t tool/design/studio/main.dart`.
@@ -88,49 +124,71 @@ class _StudioShellState extends State<StudioShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('RetroDesign Studio')),
-      body: ListenableBuilder(
-        listenable: _controller,
-        builder: (BuildContext context, Widget? _) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              SizedBox(
-                width: 160,
-                child: _PalettePanel(
-                  key: const Key('studio.palette'),
-                  controller: _controller,
-                ),
-              ),
-              const VerticalDivider(width: 1),
-              Expanded(child: _editorArea(context, _controller)),
-              const VerticalDivider(width: 1),
-              SizedBox(
-                width: 200,
-                child: Column(
+    return Shortcuts(
+      shortcuts: studioShortcuts,
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          StudioUndoIntent: CallbackAction<StudioUndoIntent>(
+            onInvoke: (StudioUndoIntent intent) {
+              _controller.undo();
+              return null;
+            },
+          ),
+          StudioRedoIntent: CallbackAction<StudioRedoIntent>(
+            onInvoke: (StudioRedoIntent intent) {
+              _controller.redo();
+              return null;
+            },
+          ),
+        },
+        child: Focus(
+          autofocus: true,
+          child: Scaffold(
+            appBar: AppBar(title: const Text('RetroDesign Studio')),
+            body: ListenableBuilder(
+              listenable: _controller,
+              builder: (BuildContext context, Widget? _) {
+                return Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    Expanded(
-                      child: _LayersPanel(
-                        key: const Key('studio.layers'),
+                    SizedBox(
+                      width: 160,
+                      child: _PalettePanel(
+                        key: const Key('studio.palette'),
                         controller: _controller,
                       ),
                     ),
-                    const Divider(height: 1),
+                    const VerticalDivider(width: 1),
+                    Expanded(child: _editorArea(context, _controller)),
+                    const VerticalDivider(width: 1),
                     SizedBox(
-                      height: 320,
-                      child: StudioInspectorPanel(
-                        key: const Key('studio.inspector'),
-                        controller: _controller,
+                      width: 200,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          Expanded(
+                            child: _LayersPanel(
+                              key: const Key('studio.layers'),
+                              controller: _controller,
+                            ),
+                          ),
+                          const Divider(height: 1),
+                          SizedBox(
+                            height: 320,
+                            child: StudioInspectorPanel(
+                              key: const Key('studio.inspector'),
+                              controller: _controller,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
-              ),
-            ],
-          );
-        },
+                );
+              },
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -177,6 +235,18 @@ class _StudioShellState extends State<StudioShell> {
             spacing: 8,
             runSpacing: 4,
             children: <Widget>[
+              IconButton(
+                key: const Key('studio.undo'),
+                icon: const Icon(Icons.undo),
+                tooltip: 'Deshacer (Ctrl/Cmd+Z)',
+                onPressed: controller.canUndo ? controller.undo : null,
+              ),
+              IconButton(
+                key: const Key('studio.redo'),
+                icon: const Icon(Icons.redo),
+                tooltip: 'Rehacer (Ctrl/Cmd+Shift+Z o Ctrl/Cmd+Y)',
+                onPressed: controller.canRedo ? controller.redo : null,
+              ),
               for (final String action in _studioActions)
                 ElevatedButton(
                   onPressed: () => _showAction(context, action),
@@ -374,6 +444,13 @@ class _NodeBox extends StatefulWidget {
 
 class _NodeBoxState extends State<_NodeBox> {
   Offset? _lastPosition;
+  bool _interacting = false;
+
+  @override
+  void dispose() {
+    if (_interacting) widget.controller.endInteraction();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -390,6 +467,8 @@ class _NodeBoxState extends State<_NodeBox> {
         onPointerDown: (PointerDownEvent event) {
           _lastPosition = event.position;
           widget.controller.selectNode(widget.path);
+          _interacting = true;
+          widget.controller.beginInteraction('move:${widget.path}');
         },
         onPointerMove: (PointerMoveEvent event) {
           final Offset? last = _lastPosition;
@@ -398,8 +477,16 @@ class _NodeBoxState extends State<_NodeBox> {
           _lastPosition = event.position;
           widget.controller.moveNode(widget.path, dx: delta.dx, dy: delta.dy);
         },
-        onPointerUp: (PointerUpEvent event) => _lastPosition = null,
-        onPointerCancel: (PointerCancelEvent event) => _lastPosition = null,
+        onPointerUp: (PointerUpEvent event) {
+          _lastPosition = null;
+          _interacting = false;
+          widget.controller.endInteraction();
+        },
+        onPointerCancel: (PointerCancelEvent event) {
+          _lastPosition = null;
+          _interacting = false;
+          widget.controller.endInteraction();
+        },
         child: DecoratedBox(
           decoration: BoxDecoration(
             border: Border.all(
@@ -456,6 +543,13 @@ class _ResizeHandle extends StatefulWidget {
 
 class _ResizeHandleState extends State<_ResizeHandle> {
   Offset? _lastPosition;
+  bool _interacting = false;
+
+  @override
+  void dispose() {
+    if (_interacting) widget.controller.endInteraction();
+    super.dispose();
+  }
 
   Offset get _anchor => switch (widget.handle) {
     StudioResizeHandle.topLeft => Offset(widget.geometry.x, widget.geometry.y),
@@ -499,8 +593,13 @@ class _ResizeHandleState extends State<_ResizeHandle> {
       child: Listener(
         key: Key('studio.handle.${widget.path}.${widget.handle.name}'),
         behavior: HitTestBehavior.opaque,
-        onPointerDown: (PointerDownEvent event) =>
-            _lastPosition = event.position,
+        onPointerDown: (PointerDownEvent event) {
+          _lastPosition = event.position;
+          _interacting = true;
+          widget.controller.beginInteraction(
+            'resize:${widget.path}:${widget.handle.name}',
+          );
+        },
         onPointerMove: (PointerMoveEvent event) {
           final Offset? last = _lastPosition;
           if (last == null) return;
@@ -513,8 +612,16 @@ class _ResizeHandleState extends State<_ResizeHandle> {
             dy: delta.dy,
           );
         },
-        onPointerUp: (PointerUpEvent event) => _lastPosition = null,
-        onPointerCancel: (PointerCancelEvent event) => _lastPosition = null,
+        onPointerUp: (PointerUpEvent event) {
+          _lastPosition = null;
+          _interacting = false;
+          widget.controller.endInteraction();
+        },
+        onPointerCancel: (PointerCancelEvent event) {
+          _lastPosition = null;
+          _interacting = false;
+          widget.controller.endInteraction();
+        },
         child: const DecoratedBox(
           decoration: BoxDecoration(
             color: Color(0xFF00695C),

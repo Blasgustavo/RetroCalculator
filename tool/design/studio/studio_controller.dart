@@ -115,6 +115,114 @@ DesignNode? studioNodeAtPath(List<DesignNode> roots, String path) {
   return current;
 }
 
+/// Estado completo de una sesión de edición, capturado antes de cada mutación
+/// real (T26). La geometría y los flags se copian en profundidad porque sus
+/// mapas/sets son mutables. Del documento se copian las listas de nodos:
+/// `addNode` y `moveLayer` escriben in situ en esas listas, así que guardar
+/// solo la referencia perdería el estado previo. El resto de campos del seed
+/// se sustituye por valores nuevos en cada mutación y se guarda por referencia.
+/// Las preferencias de herramienta quedan fuera: cambiar el snapping no es una
+/// edición del documento.
+class _StudioSnapshot {
+  const _StudioSnapshot({
+    required this.document,
+    required this.screen,
+    required this.breakpoint,
+    required this.selectedNodePath,
+    required this.selectedSkinId,
+    required this.selectedProfileId,
+    required this.geometry,
+    required this.hidden,
+    required this.locked,
+  });
+
+  final DesignSeed document;
+  final String screen;
+  final String breakpoint;
+  final String selectedNodePath;
+  final String? selectedSkinId;
+  final String? selectedProfileId;
+  final Map<String, Map<String, Map<String, StudioGeometry>>> geometry;
+  final Map<String, Map<String, Set<String>>> hidden;
+  final Map<String, Map<String, Set<String>>> locked;
+}
+
+Map<String, Map<String, Map<String, StudioGeometry>>> _copyGeometry(
+  Map<String, Map<String, Map<String, StudioGeometry>>> source,
+) => source.map(
+  (String screen, Map<String, Map<String, StudioGeometry>> breakpoints) =>
+      MapEntry<String, Map<String, Map<String, StudioGeometry>>>(
+        screen,
+        breakpoints.map(
+          (String breakpoint, Map<String, StudioGeometry> paths) =>
+              MapEntry<String, Map<String, StudioGeometry>>(
+                breakpoint,
+                Map<String, StudioGeometry>.from(paths),
+              ),
+        ),
+      ),
+);
+
+/// Copia del documento con las listas de nodos aisladas. Solo esas listas
+/// (y los `children`/`child` de cada nodo) se mutan in situ en el Studio.
+DesignSeed _copyDocument(DesignSeed document) => DesignSeed(
+  schemaVersion: document.schemaVersion,
+  version: document.version,
+  channels: document.channels,
+  skins: document.skins,
+  images: document.images,
+  screens: document.screens.map(
+    (String screen, Map<String, List<DesignNode>> breakpoints) =>
+        MapEntry<String, Map<String, List<DesignNode>>>(
+          screen,
+          breakpoints.map(
+            (String breakpoint, List<DesignNode> nodes) =>
+                MapEntry<String, List<DesignNode>>(
+                  breakpoint,
+                  _copyNodeList(nodes),
+                ),
+          ),
+        ),
+  ),
+  profiles: document.profiles,
+  dimensions: document.dimensions,
+  sounds: document.sounds,
+  monetization: document.monetization,
+  publishing: document.publishing,
+);
+
+List<DesignNode> _copyNodeList(List<DesignNode> nodes) => <DesignNode>[
+  for (final DesignNode node in nodes) _copyNodeTree(node),
+];
+
+DesignNode _copyNodeTree(DesignNode node) => DesignNode(
+  type: node.type,
+  key: node.key,
+  titleKey: node.titleKey,
+  when: node.when,
+  value: node.value,
+  height: node.height,
+  alignment: node.alignment,
+  child: node.child == null ? null : _copyNodeTree(node.child!),
+  children: node.children == null ? null : _copyNodeList(node.children!),
+);
+
+Map<String, Map<String, Set<String>>> _copyFlags(
+  Map<String, Map<String, Set<String>>> source,
+) => source.map(
+  (String screen, Map<String, Set<String>> breakpoints) =>
+      MapEntry<String, Map<String, Set<String>>>(
+        screen,
+        breakpoints.map(
+          (String breakpoint, Set<String> paths) =>
+              MapEntry<String, Set<String>>(
+                breakpoint,
+                Set<String>.from(paths),
+              ),
+        ),
+      ),
+);
+
 class StudioController extends ChangeNotifier {
   StudioController({
     required DesignSeed document,
@@ -156,6 +264,18 @@ class StudioController extends ChangeNotifier {
       <String, Map<String, Set<String>>>{};
   bool _snappingEnabled = false;
   double _snapGrid = studioDefaultSnapGrid;
+
+  // T26 — historial de la herramienta. Solo entra aquí el estado anterior a
+  // una mutación real; nunca se serializa en el spec ni en `serializeLayout`.
+  static const int historyLimit = 50;
+  final List<_StudioSnapshot> _undoStack = <_StudioSnapshot>[];
+  final List<_StudioSnapshot> _redoStack = <_StudioSnapshot>[];
+
+  // Agrupación determinista de gestos: `beginInteraction` guarda el estado
+  // inicial; la primera mutación real lo consume y las siguientes del mismo
+  // gesto no empujan nada. Sin temporizadores ni reloj.
+  String? _interactionKey;
+  _StudioSnapshot? _pendingInteractionSnapshot;
 
   static String _firstScreen(DesignSeed document) =>
       document.screens.isEmpty ? '' : document.screens.keys.first;
@@ -215,6 +335,107 @@ class StudioController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ---------------------------------------------------------------------------
+  // T26 — undo/redo e interacciones agrupadas
+  // ---------------------------------------------------------------------------
+
+  bool get canUndo => _undoStack.isNotEmpty;
+
+  bool get canRedo => _redoStack.isNotEmpty;
+
+  /// Empieza un gesto con clave [key] (por ejemplo `move:0`). Captura el
+  /// estado previo una sola vez; la primera mutación real del gesto lo empuja.
+  /// Un `beginInteraction` anidado se ignora para no perder la captura original.
+  void beginInteraction(String key) {
+    if (_interactionKey != null) return;
+    _interactionKey = key;
+    _pendingInteractionSnapshot = _captureSnapshot();
+  }
+
+  /// Termina el gesto. Si no hubo mutaciones, la captura se descarta.
+  void endInteraction() => _cancelInteraction();
+
+  /// Cancela la captura pendiente sin notificar. La navegación y las operaciones
+  /// que restauran estado la usan para no empujar un snapshot obsoleto.
+  void _cancelInteraction() {
+    _interactionKey = null;
+    _pendingInteractionSnapshot = null;
+  }
+
+  /// Restaura el estado anterior. Con pila vacía no notifica; cancela siempre
+  /// cualquier interacción pendiente para no restaurar un estado obsoleto.
+  void undo() {
+    _cancelInteraction();
+    if (!canUndo) return;
+    final _StudioSnapshot current = _captureSnapshot();
+    final _StudioSnapshot previous = _undoStack.removeLast();
+    _redoStack.add(current);
+    _restoreSnapshot(previous);
+    notifyListeners();
+  }
+
+  /// Restaura el estado siguiente. Con pila vacía no notifica.
+  void redo() {
+    _cancelInteraction();
+    if (!canRedo) return;
+    final _StudioSnapshot next = _redoStack.removeLast();
+    _pushUndo(_captureSnapshot());
+    _restoreSnapshot(next);
+    notifyListeners();
+  }
+
+  /// Empuja el estado previo de una mutación real y descarta el redo.
+  /// Se llama justo antes de cambiar algo, nunca en no-ops ni validaciones.
+  void _recordMutation() {
+    final _StudioSnapshot? pending = _pendingInteractionSnapshot;
+    if (pending != null) {
+      // Primera mutación del gesto: se empuja la captura del inicio.
+      _pendingInteractionSnapshot = null;
+      _pushUndo(pending);
+    } else if (_interactionKey == null) {
+      // Sin gesto activo: cada mutación es una entrada independiente.
+      _pushUndo(_captureSnapshot());
+    }
+    _redoStack.clear();
+  }
+
+  void _pushUndo(_StudioSnapshot snapshot) {
+    _undoStack.add(snapshot);
+    if (_undoStack.length > historyLimit) {
+      _undoStack.removeAt(0);
+    }
+  }
+
+  _StudioSnapshot _captureSnapshot() => _StudioSnapshot(
+    document: _copyDocument(_document),
+    screen: _screen,
+    breakpoint: _breakpoint,
+    selectedNodePath: _selectedNodePath,
+    selectedSkinId: _selectedSkinId,
+    selectedProfileId: _selectedProfileId,
+    geometry: _copyGeometry(_geometry),
+    hidden: _copyFlags(_hidden),
+    locked: _copyFlags(_locked),
+  );
+
+  void _restoreSnapshot(_StudioSnapshot snapshot) {
+    _document = snapshot.document;
+    _screen = snapshot.screen;
+    _breakpoint = snapshot.breakpoint;
+    _selectedNodePath = snapshot.selectedNodePath;
+    _selectedSkinId = snapshot.selectedSkinId;
+    _selectedProfileId = snapshot.selectedProfileId;
+    _geometry
+      ..clear()
+      ..addAll(_copyGeometry(snapshot.geometry));
+    _hidden
+      ..clear()
+      ..addAll(_copyFlags(snapshot.hidden));
+    _locked
+      ..clear()
+      ..addAll(_copyFlags(snapshot.locked));
+  }
+
   /// Frame del breakpoint activo, según las dimensiones del documento.
   Size get frame => studioFrameSize(_document, _breakpoint);
 
@@ -231,6 +452,7 @@ class StudioController extends ChangeNotifier {
 
   void selectScreen(String value) {
     if (value == _screen || !_document.screens.containsKey(value)) return;
+    _cancelInteraction();
     _screen = value;
     _selectedNodePath = '';
     notifyListeners();
@@ -238,6 +460,7 @@ class StudioController extends ChangeNotifier {
 
   void selectBreakpoint(String value) {
     if (value == _breakpoint || !designBreakpoints.contains(value)) return;
+    _cancelInteraction();
     _breakpoint = value;
     _selectedNodePath = '';
     notifyListeners();
@@ -254,6 +477,7 @@ class StudioController extends ChangeNotifier {
     final Map<String, List<DesignNode>>? breakpoints =
         _document.screens[_screen];
     if (breakpoints == null) return null;
+    _recordMutation();
     final List<DesignNode> nodes = breakpoints[_breakpoint] ??= <DesignNode>[];
     final String path = '${nodes.length}';
     nodes.add(DesignNode(type: type));
@@ -267,12 +491,14 @@ class StudioController extends ChangeNotifier {
   void selectNode(String path) {
     if (path == _selectedNodePath) return;
     if (studioNodeAtPath(currentNodes, path) == null) return;
+    _cancelInteraction();
     _selectedNodePath = path;
     notifyListeners();
   }
 
   void clearSelection() {
     if (_selectedNodePath.isEmpty) return;
+    _cancelInteraction();
     _selectedNodePath = '';
     notifyListeners();
   }
@@ -293,6 +519,7 @@ class StudioController extends ChangeNotifier {
     if (isNodeEffectivelyLocked(path)) return;
     final Set<String> hidden = _hiddenSet();
     if (value == hidden.contains(path)) return;
+    _recordMutation();
     if (value) {
       hidden.add(path);
     } else {
@@ -305,6 +532,7 @@ class StudioController extends ChangeNotifier {
     if (studioNodeAtPath(currentNodes, path) == null) return;
     final Set<String> locked = _lockedSet();
     if (value == locked.contains(path)) return;
+    _recordMutation();
     if (value) {
       locked.add(path);
     } else {
@@ -342,6 +570,7 @@ class StudioController extends ChangeNotifier {
   /// que sigan apuntando al mismo nodo después del cambio de ruta.
   void moveLayer(String path, {required bool up}) {
     if (!canMoveLayer(path, up: up)) return;
+    _recordMutation();
     final List<DesignNode> siblings = _siblingList(path)!;
     final int index = int.tryParse(_splitPath(path)!.token)!;
     final int target = index + (up ? -1 : 1);
@@ -475,6 +704,7 @@ class StudioController extends ChangeNotifier {
 
   void selectSkin(String id) {
     if (id == _selectedSkinId || _skin(id) == null) return;
+    _cancelInteraction();
     _selectedSkinId = id;
     notifyListeners();
   }
@@ -504,6 +734,7 @@ class StudioController extends ChangeNotifier {
       if (parsed != null && parsed.isFinite) normalized = parsed;
     }
     if (skin.tokens[key] == normalized) return;
+    _recordMutation();
 
     final Map<String, Object?> tokens = Map<String, Object?>.from(skin.tokens);
     if (normalized == null) {
@@ -564,6 +795,7 @@ class StudioController extends ChangeNotifier {
       return;
     }
     if (studioNodePropertyValue(node, property) == normalized) return;
+    _recordMutation();
 
     final Map<String, Map<String, List<DesignNode>>> screens =
         Map<String, Map<String, List<DesignNode>>>.from(_document.screens);
@@ -583,6 +815,7 @@ class StudioController extends ChangeNotifier {
 
   void selectProfile(String id) {
     if (id == _selectedProfileId || _profile(id) == null) return;
+    _cancelInteraction();
     _selectedProfileId = id;
     notifyListeners();
   }
@@ -599,6 +832,7 @@ class StudioController extends ChangeNotifier {
         profile.formulas[name] == expression) {
       return;
     }
+    _recordMutation();
     final Map<String, String> formulas = Map<String, String>.from(
       profile.formulas,
     );
@@ -766,7 +1000,10 @@ class StudioController extends ChangeNotifier {
   void setNodeGeometry(String path, StudioGeometry geometry) {
     if (studioNodeAtPath(currentNodes, path) == null) return;
     if (isNodeEffectivelyLocked(path)) return;
-    _geometryMap()[path] = _clampGeometry(geometry, frame);
+    final StudioGeometry clamped = _clampGeometry(geometry, frame);
+    if (clamped == geometryOf(path)) return;
+    _recordMutation();
+    _geometryMap()[path] = clamped;
     notifyListeners();
   }
 
@@ -931,8 +1168,12 @@ class StudioController extends ChangeNotifier {
     return (value / _snapGrid).round() * _snapGrid;
   }
 
-  /// Sustituye el documento abierto y vuelve a la selección inicial.
+  /// Sustituye el documento abierto, vuelve a la selección inicial y limpia
+  /// por completo el historial (no se puede deshacer hasta otro documento).
   void loadDocument(DesignSeed document) {
+    _cancelInteraction();
+    _undoStack.clear();
+    _redoStack.clear();
     _document = document;
     _screen = _firstScreen(document);
     _breakpoint = designBreakpoints.first;
