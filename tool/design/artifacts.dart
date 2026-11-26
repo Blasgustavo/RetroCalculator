@@ -268,6 +268,13 @@ String _sounds(DesignSeed design, {required Directory assetsRoot}) {
   return '$out';
 }
 
+/// Serializa un nodo a su forma JSON del spec v2.
+///
+/// Wrapper aditivo sobre [_nodeMap] para que el RetroDesign Studio (y quien
+/// quiera) reutilice la misma conversión que el compilador sin duplicarla ni
+/// cambiar su comportamiento.
+Map<String, Object?> designNodeToJson(DesignNode node) => _nodeMap(node);
+
 Map<String, Object?> _nodeMap(DesignNode node) {
   final Map<String, Object?> result = <String, Object?>{'type': node.type};
   if (node.key != null) result['key'] = node.key;
