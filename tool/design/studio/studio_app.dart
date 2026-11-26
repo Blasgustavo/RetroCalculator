@@ -20,11 +20,37 @@ import 'studio_inspector.dart';
 
 const List<String> _studioActions = <String>[
   'Guardar',
+  'Recargar',
   'Validar',
   'Aplicar',
+  'Ver en preview',
   'Compilar',
   'Publicar',
 ];
+
+/// Keys deterministas de las acciones, estables entre slices.
+const Key _saveKey = Key('studio.save');
+const Key _reloadKey = Key('studio.reload');
+const Key _applyKey = Key('studio.apply');
+const Key _previewKey = Key('studio.preview');
+
+Key? _actionKey(String action) => switch (action) {
+  'Guardar' => _saveKey,
+  'Recargar' => _reloadKey,
+  'Aplicar' => _applyKey,
+  'Ver en preview' => _previewKey,
+  _ => null,
+};
+
+/// Siete acciones caben en la barra estrecha del editor sin desplazar el
+/// canvas: se conserva la altura táctil, solo se reduce el padding lateral.
+final ButtonStyle _actionButtonStyle = ButtonStyle(
+  padding: WidgetStateProperty.all<EdgeInsetsGeometry>(
+    const EdgeInsets.symmetric(horizontal: 2),
+  ),
+  minimumSize: WidgetStateProperty.all<Size>(const Size(0, 48)),
+  textStyle: WidgetStateProperty.all<TextStyle>(const TextStyle(fontSize: 12)),
+);
 
 /// Intents propios: `UndoIntent`/`RedoIntent` pertenecen a los `TextField` y
 /// envolverlos aquí haría que Ctrl+Z del editor competiera con el deshacer
@@ -252,7 +278,8 @@ class _StudioShellState extends State<StudioShell> {
               ),
               for (final String action in _studioActions)
                 ElevatedButton(
-                  key: action == 'Aplicar' ? const Key('studio.apply') : null,
+                  key: _actionKey(action),
+                  style: _actionButtonStyle,
                   onPressed: () => _runAction(context, action, controller),
                   child: Text(action),
                 ),
@@ -278,20 +305,40 @@ class _StudioShellState extends State<StudioShell> {
     );
   }
 
-  /// Validar y Aplicar pasan por el controller; el resto sigue siendo
-  /// placeholder (T28/V7) y conserva su snackbar heredado.
+  /// Guardar/Recargar/Validar/Aplicar pasan por el controller y «Ver en
+  /// preview» abre el renderer compartido. Compilar y Publicar siguen siendo
+  /// placeholder (V7) y conservan su snackbar heredado.
   void _runAction(
     BuildContext context,
     String action,
     StudioController controller,
   ) {
-    if (action == 'Validar') {
+    if (action == 'Guardar') {
+      controller.saveDocument();
+    } else if (action == 'Recargar') {
+      controller.reloadDocument();
+    } else if (action == 'Validar') {
       controller.validateDocument();
     } else if (action == 'Aplicar') {
       controller.applyDocument();
+    } else if (action == 'Ver en preview') {
+      _openPreview(context, controller);
     } else {
       _showAction(context, action);
     }
+  }
+
+  /// El preview consume `currentSpec`, no el JSON filtrado del canvas: lo que
+  /// ve el compilador es lo que se muestra (ADR-0015).
+  void _openPreview(BuildContext context, StudioController controller) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => _StudioPreviewPage(
+          nodes: controller.currentSpec,
+          width: controller.frame.width,
+        ),
+      ),
+    );
   }
 
   void _showAction(BuildContext context, String action) {
@@ -299,6 +346,36 @@ class _StudioShellState extends State<StudioShell> {
       SnackBar(
         content: Text(
           '$action: pendiente de implementación en un slice posterior',
+        ),
+      ),
+    );
+  }
+}
+
+/// Vista de lectura con el mismo `SpecRenderer` de la app. El ancho del frame
+/// del breakpoint viaja con el spec; los dos ejes con scroll evitan overflow
+/// tanto en pantallas estrechas como en breakpoints anchos.
+class _StudioPreviewPage extends StatelessWidget {
+  const _StudioPreviewPage({required this.nodes, required this.width});
+
+  final List<Object?> nodes;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Vista previa')),
+      body: SingleChildScrollView(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: width,
+            child: SpecRenderer(
+              key: const Key('studio.preview.renderer'),
+              nodes: nodes,
+              renderContext: const SpecRenderContext(),
+            ),
+          ),
         ),
       ),
     );
@@ -329,7 +406,10 @@ class _ApplyStatusPanel extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: _rows(controller.lastApplyResult),
+              children: _rows(
+                controller.lastApplyResult,
+                controller.persistenceStatus,
+              ),
             ),
           ),
         ),
@@ -337,20 +417,28 @@ class _ApplyStatusPanel extends StatelessWidget {
     );
   }
 
-  List<Widget> _rows(StudioApplyResult? result) {
+  List<Widget> _rows(StudioApplyResult? result, String? persistenceStatus) {
+    final List<Widget> rows = <Widget>[];
+    if (persistenceStatus != null) {
+      rows.add(
+        Text(persistenceStatus, key: const Key('studio.persistence.status')),
+      );
+    }
     if (result == null) {
-      return const <Widget>[Text('Sin resultados')];
+      if (rows.isEmpty) rows.add(const Text('Sin resultados'));
+      return rows;
     }
     if (result.issues.isNotEmpty) {
-      return <Widget>[
+      rows.addAll(<Widget>[
         for (int i = 0; i < result.issues.length; i++)
           Text(
             '${result.issues[i].path}: ${result.issues[i].message}',
             key: Key('studio.apply.issue.$i'),
           ),
-      ];
+      ]);
+      return rows;
     }
-    final List<Widget> rows = <Widget>[const Text('Válido')];
+    rows.add(const Text('Válido'));
     if (result.written.isEmpty) {
       rows.add(const Text('Solo validación'));
       return rows;
