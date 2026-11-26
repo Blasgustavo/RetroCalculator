@@ -77,6 +77,14 @@ class StudioController extends ChangeNotifier {
   // ruta del nodo → rectángulo. Cambiar de breakpoint conserva la posición.
   final Map<String, Map<String, Map<String, StudioGeometry>>> _geometry =
       <String, Map<String, Map<String, StudioGeometry>>>{};
+
+  // T24 — estado de edición de capas, también separado del documento (ADR-0015):
+  // pantalla → breakpoint → conjunto de rutas. Solo las rutas presentes son
+  // `true`; ausencia = valor por defecto (`false`).
+  final Map<String, Map<String, Set<String>>> _hidden =
+      <String, Map<String, Set<String>>>{};
+  final Map<String, Map<String, Set<String>>> _locked =
+      <String, Map<String, Set<String>>>{};
   bool _snappingEnabled = false;
   double _snapGrid = studioDefaultSnapGrid;
 
@@ -201,6 +209,193 @@ class StudioController extends ChangeNotifier {
   }
 
   // ---------------------------------------------------------------------------
+  // T24 — capas: visibilidad, bloqueo y reordenación
+  // ---------------------------------------------------------------------------
+
+  /// Visibilidad de edición de un nodo. `false` por defecto, también en rutas
+  /// inválidas: ocultar nunca elimina el nodo del spec (ADR-0015).
+  bool isNodeHidden(String path) => _hiddenSet().contains(path);
+
+  /// Bloqueo propio de un nodo, sin contar el de sus ancestros.
+  bool isNodeLocked(String path) => _lockedSet().contains(path);
+
+  void setNodeHidden(String path, bool value) {
+    if (studioNodeAtPath(currentNodes, path) == null) return;
+    if (isNodeEffectivelyLocked(path)) return;
+    final Set<String> hidden = _hiddenSet();
+    if (value == hidden.contains(path)) return;
+    if (value) {
+      hidden.add(path);
+    } else {
+      hidden.remove(path);
+    }
+    notifyListeners();
+  }
+
+  void setNodeLocked(String path, bool value) {
+    if (studioNodeAtPath(currentNodes, path) == null) return;
+    final Set<String> locked = _lockedSet();
+    if (value == locked.contains(path)) return;
+    if (value) {
+      locked.add(path);
+    } else {
+      locked.remove(path);
+    }
+    notifyListeners();
+  }
+
+  /// `true` si el nodo o cualquiera de sus ancestros está bloqueado.
+  bool isNodeEffectivelyLocked(String path) {
+    if (path.isEmpty) return false;
+    if (isNodeLocked(path)) return true;
+    final List<String> tokens = path.split('.');
+    String prefix = '';
+    for (int i = 0; i < tokens.length - 1; i++) {
+      prefix = prefix.isEmpty ? tokens[i] : '$prefix.${tokens[i]}';
+      if (isNodeLocked(prefix)) return true;
+    }
+    return false;
+  }
+
+  /// ¿Se puede intercambiar el nodo con el hermano anterior (`up`) o siguiente?
+  bool canMoveLayer(String path, {required bool up}) {
+    if (studioNodeAtPath(currentNodes, path) == null) return false;
+    if (isNodeEffectivelyLocked(path)) return false;
+    final List<DesignNode>? siblings = _siblingList(path);
+    if (siblings == null) return false;
+    final int index = int.tryParse(_splitPath(path)!.token) ?? -1;
+    if (index < 0) return false;
+    return up ? index > 0 : index < siblings.length - 1;
+  }
+
+  /// Reordena el nodo dentro de su lista (raíz o `children`). El `child`
+  /// único no tiene hermanos. Mueve también geometría, flags y selección para
+  /// que sigan apuntando al mismo nodo después del cambio de ruta.
+  void moveLayer(String path, {required bool up}) {
+    if (!canMoveLayer(path, up: up)) return;
+    final List<DesignNode> siblings = _siblingList(path)!;
+    final int index = int.tryParse(_splitPath(path)!.token)!;
+    final int target = index + (up ? -1 : 1);
+    final String otherPath = _replaceLastToken(path, '$target');
+
+    // Materializa la geometría derivada de la ruta antes de mover: así un
+    // nodo sin rectángulo guardado no cambia de posición al reordenarse.
+    for (final String candidate in _allNodePaths()) {
+      if (_isUnder(candidate, path) || _isUnder(candidate, otherPath)) {
+        _geometryMap()[candidate] = geometryOf(candidate)!;
+      }
+    }
+
+    final DesignNode node = siblings[index];
+    siblings[index] = siblings[target];
+    siblings[target] = node;
+
+    // Tras el intercambio, cada nodo toma la ruta que ocupaba el otro.
+    final String newPath = otherPath;
+    final String otherNewPath = path;
+    _remapLayerState((String candidate) {
+      if (_isUnder(candidate, path)) {
+        return newPath + candidate.substring(path.length);
+      }
+      if (_isUnder(candidate, otherPath)) {
+        return otherNewPath + candidate.substring(otherPath.length);
+      }
+      return candidate;
+    });
+    notifyListeners();
+  }
+
+  void _remapLayerState(String Function(String path) remap) {
+    final Map<String, StudioGeometry> geometry = _geometryMap();
+    final Map<String, StudioGeometry> remappedGeometry =
+        <String, StudioGeometry>{
+          for (final MapEntry<String, StudioGeometry> entry in geometry.entries)
+            remap(entry.key): entry.value,
+        };
+    geometry
+      ..clear()
+      ..addAll(remappedGeometry);
+
+    final Set<String> hidden = _hiddenSet();
+    final Set<String> remappedHidden = hidden.map(remap).toSet();
+    hidden
+      ..clear()
+      ..addAll(remappedHidden);
+
+    final Set<String> locked = _lockedSet();
+    final Set<String> remappedLocked = locked.map(remap).toSet();
+    locked
+      ..clear()
+      ..addAll(remappedLocked);
+
+    if (_selectedNodePath.isNotEmpty) {
+      _selectedNodePath = remap(_selectedNodePath);
+    }
+  }
+
+  ({String parent, String token})? _splitPath(String path) {
+    if (path.isEmpty) return null;
+    final int dot = path.lastIndexOf('.');
+    if (dot < 0) return (parent: '', token: path);
+    return (parent: path.substring(0, dot), token: path.substring(dot + 1));
+  }
+
+  String _replaceLastToken(String path, String token) {
+    final String parent = _splitPath(path)!.parent;
+    return parent.isEmpty ? token : '$parent.$token';
+  }
+
+  bool _isUnder(String candidate, String root) =>
+      candidate == root || candidate.startsWith('$root.');
+
+  /// Lista mutable de hermanos de [path] (raíz o `children` del padre).
+  /// Devuelve `null` para el token `c` y para rutas sin lista asociada.
+  List<DesignNode>? _siblingList(String path) {
+    final ({String parent, String token})? split = _splitPath(path);
+    if (split == null || split.token == 'c') return null;
+    final int index = int.tryParse(split.token) ?? -1;
+    if (index < 0) return null;
+    List<DesignNode>? siblings;
+    if (split.parent.isEmpty) {
+      siblings = _document.screens[_screen]?[_breakpoint];
+    } else {
+      final DesignNode? parent = studioNodeAtPath(currentNodes, split.parent);
+      siblings = parent?.children;
+    }
+    if (siblings == null || index >= siblings.length) return null;
+    return siblings;
+  }
+
+  /// Todas las rutas válidas del breakpoint activo, incluidos `child` y
+  /// `children` en cualquier profundidad.
+  List<String> _allNodePaths() {
+    final List<String> paths = <String>[];
+    void walk(
+      List<DesignNode> nodes,
+      String basePath, {
+      bool singleChild = false,
+    }) {
+      for (int i = 0; i < nodes.length; i++) {
+        final String path = singleChild
+            ? '$basePath.c'
+            : basePath.isEmpty
+            ? '$i'
+            : '$basePath.$i';
+        paths.add(path);
+        final DesignNode node = nodes[i];
+        if (node.child != null) {
+          walk(<DesignNode>[node.child!], path, singleChild: true);
+        }
+        final List<DesignNode>? children = node.children;
+        if (children != null) walk(children, path);
+      }
+    }
+
+    walk(currentNodes, '');
+    return paths;
+  }
+
+  // ---------------------------------------------------------------------------
   // T23 — mover, redimensionar y serializar geometría
   // ---------------------------------------------------------------------------
 
@@ -209,12 +404,14 @@ class StudioController extends ChangeNotifier {
   /// mover y redimensionar pasan por aquí, igual que la serialización.
   void setNodeGeometry(String path, StudioGeometry geometry) {
     if (studioNodeAtPath(currentNodes, path) == null) return;
+    if (isNodeEffectivelyLocked(path)) return;
     _geometryMap()[path] = _clampGeometry(geometry, frame);
     notifyListeners();
   }
 
   /// Coloca un nodo en una posición absoluta del frame (con snapping opcional).
   void setNodePosition(String path, {required double x, required double y}) {
+    if (isNodeEffectivelyLocked(path)) return;
     final StudioGeometry? geometry = geometryOf(path);
     if (geometry == null) return;
     setNodeGeometry(path, geometry.copyWith(x: _snap(x), y: _snap(y)));
@@ -222,6 +419,7 @@ class StudioController extends ChangeNotifier {
 
   /// Mueve un nodo por el delta del gesto; actualiza sus coordenadas x/y.
   void moveNode(String path, {required double dx, required double dy}) {
+    if (isNodeEffectivelyLocked(path)) return;
     final StudioGeometry? geometry = geometryOf(path);
     if (geometry == null) return;
     setNodePosition(path, x: geometry.x + dx, y: geometry.y + dy);
@@ -237,6 +435,7 @@ class StudioController extends ChangeNotifier {
     double dx = 0,
     double dy = 0,
   }) {
+    if (isNodeEffectivelyLocked(path)) return;
     final StudioGeometry? geometry = geometryOf(path);
     if (geometry == null) return;
 
@@ -321,6 +520,14 @@ class StudioController extends ChangeNotifier {
       .putIfAbsent(_screen, () => <String, Map<String, StudioGeometry>>{})
       .putIfAbsent(_breakpoint, () => <String, StudioGeometry>{});
 
+  Set<String> _hiddenSet() => _hidden
+      .putIfAbsent(_screen, () => <String, Set<String>>{})
+      .putIfAbsent(_breakpoint, () => <String>{});
+
+  Set<String> _lockedSet() => _locked
+      .putIfAbsent(_screen, () => <String, Set<String>>{})
+      .putIfAbsent(_breakpoint, () => <String>{});
+
   StudioGeometry _defaultGeometry(String path) {
     final int index = int.tryParse(path.split('.').first) ?? 0;
     return StudioGeometry(
@@ -370,6 +577,8 @@ class StudioController extends ChangeNotifier {
     _breakpoint = designBreakpoints.first;
     _selectedNodePath = '';
     _geometry.clear();
+    _hidden.clear();
+    _locked.clear();
     notifyListeners();
   }
 }
