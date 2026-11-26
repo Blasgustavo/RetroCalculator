@@ -1,5 +1,7 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "model": "opencode/beam-free",
+  "default_agent": "orchestrator",
   "permission": {
     "skill": {
       "*": "allow"
@@ -29,44 +31,81 @@
           "platform": "allow",
           "testing": "allow",
           "docs": "allow",
-          "infra": "allow"
+          "infra": "allow",
+          "general": "allow",
+          "explore": "allow"
         }
       }
     },
+    "build": {
+      "mode": "primary"
+    },
     "calculator": {
       "mode": "subagent",
+      "model": "opencode/deepseek-v4.1-flash-free",
+      "variant": "high",
       "description": "Motor de cálculo y calculadora normal/científica",
       "prompt": ".opencode/agents/calculator.md"
     },
     "skins": {
       "mode": "subagent",
+      "model": "opencode/mimo-v2.6-flash-free",
       "description": "Catálogo de skins, tienda y vista previa",
       "prompt": ".opencode/agents/skins.md"
     },
     "monetization": {
       "mode": "subagent",
+      "model": "opencode/deepseek-v4.1-flash-free",
+      "variant": "high",
       "description": "Anuncios recompensados, IAP y entitlements temporales",
       "prompt": ".opencode/agents/monetization.md"
     },
     "platform": {
       "mode": "subagent",
+      "model": "opencode/flint-40b-free",
+      "variant": "high",
       "description": "Adaptaciones Android, Windows e iOS",
       "prompt": ".opencode/agents/platform.md"
     },
     "testing": {
       "mode": "subagent",
+      "model": "opencode/flint-40b-free",
+      "variant": "medium",
       "description": "Tests unitarios, de widget e integración",
       "prompt": ".opencode/agents/testing.md"
     },
     "docs": {
       "mode": "subagent",
+      "model": "opencode/mimo-v2.6-flash-free",
       "description": "Documentación técnica, ADRs y planes",
       "prompt": ".opencode/agents/docs.md"
     },
     "infra": {
       "mode": "subagent",
+      "model": "opencode/flint-40b-free",
+      "variant": "high",
       "description": "CI/CD, GitHub Actions y releases",
       "prompt": ".opencode/agents/infra.md"
+    },
+    "general": {
+      "mode": "subagent",
+      "model": "opencode/beam-free",
+      "variant": "max",
+      "description": "Revisiones de spec y calidad; no modifica archivos",
+      "permission": {
+        "write": "deny",
+        "patch": "deny"
+      }
+    },
+    "explore": {
+      "mode": "subagent",
+      "model": "opencode/hy4-flash-free",
+      "variant": "high",
+      "description": "Exploración rápida del repositorio; solo lectura",
+      "permission": {
+        "write": "deny",
+        "patch": "deny"
+      }
     }
   }
 }
