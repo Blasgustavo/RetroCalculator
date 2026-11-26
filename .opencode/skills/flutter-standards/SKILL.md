@@ -10,7 +10,7 @@ version: "1.0.0"
 license: Apache-2.0
 metadata:
   author: RetroCalculator
-  usage: { count: 4, last_used: "2026-11-25", success_rate: 1.0 }
+  usage: { count: 5, last_used: "2026-11-26", success_rate: 1.0 }
   dependencies: []
   status: active
   category: flutter
@@ -135,6 +135,10 @@ Fijar una única estructura para que calculadora, skins, monetización y platafo
 
    Con `flutter pub get` en este entorno se regeneran `windows/flutter/generated_plugin_registrant.{cc,h}` y `generated_plugins.cmake`. Windows es fase 2 (ADR-0002): restaurarlos con `git restore -- windows/flutter/` antes de committear. El usuario validó manualmente el MVP en Android con este comando el 2026-11-24: `2 + 3 = 5`, modo científico e historial global.
 
+11. **Studio: aplicar y persistir son operaciones distintas (verificado el 2026-11-26)**
+
+    `Aplicar` es el único gate que serializa, valida con `validate.dart` y compila: si hay issues no escribe nada. `Guardar` solo persiste el JSON canónico (LF y un único `\n` final); `Recargar` sustituye el documento con `loadDocument`, limpia historial y descarta el feedback de `Aplicar` del documento anterior. Los módulos de herramienta bajo `tool/design/studio/` que serializan o escriben son Dart puro: toman la ruta por defecto de `compile.dart` (`defaultDesignPath`) y nunca importan `studio_controller.dart`, porque arrastra Flutter y crea un ciclo innecesario. El feedback de validar/aplicar/guardar/recargar queda fuera del snapshot de undo (ADR-0015). El preview usa `SpecRenderer` con `currentSpec`, sin aplicar el filtro de nodos ocultos del editor. Verificado en V4 T27/T28: 156/156 y 169/169 en unit+widget, `flutter analyze` 0 issues y CI Linux en verde.
+
 ## Commands
 
 ```bash
@@ -169,6 +173,9 @@ flutter build ios --no-codesign
 - Importar `features/` desde `lib/core/widgets/` en un renderer compartido.
 - Versionar goldens generados en Windows y darlos por válidos porque pasan localmente: la fuente canónica es CI Linux; regenerar allí y exigir `Analyze and test` en verde.
 - Generar artefactos con CRLF en Windows o calcular el checksum después de escribir: el SHA-256 cambia entre plataformas y rompe la idempotencia.
+- Hacer que Guardar valide/compile o que Aplicar escriba sin pasar por `validate.dart`: son flujos distintos del Studio.
+- Importar `studio_controller.dart` desde un módulo de persistencia/serialización bajo `tool/` para reutilizar una constante: usar `defaultDesignPath` de `compile.dart` y mantener el módulo Dart puro.
+- Conservar `lastApplyResult` tras Recargar o meter el feedback de validar/aplicar/guardar/recargar en el historial de undo.
 - Reemplazar en un slice de migración un manifiesto o una skin que ya consume la app: emitir el formato nuevo en paralelo y migrar al cliente en su slice.
 - Copiar convenciones de NestJS, Angular, Leaflet o del dominio FieldOps de ElectroSys.
 
