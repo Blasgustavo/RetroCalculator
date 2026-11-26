@@ -13,6 +13,7 @@ import 'package:retro_calculator/core/widgets/spec_renderer.dart';
 
 import '../artifacts.dart' show designNodeToJson;
 import '../schema.dart';
+import 'studio_apply.dart' show StudioApplyResult;
 import 'studio_controller.dart';
 import 'studio_geometry.dart';
 import 'studio_inspector.dart';
@@ -20,6 +21,7 @@ import 'studio_inspector.dart';
 const List<String> _studioActions = <String>[
   'Guardar',
   'Validar',
+  'Aplicar',
   'Compilar',
   'Publicar',
 ];
@@ -113,6 +115,7 @@ class _StudioShellState extends State<StudioShell> {
         widget.controller ??
         StudioController(
           document: widget.document ?? loadStudioDocument(widget.designPath),
+          designPath: widget.designPath,
         );
   }
 
@@ -249,10 +252,19 @@ class _StudioShellState extends State<StudioShell> {
               ),
               for (final String action in _studioActions)
                 ElevatedButton(
-                  onPressed: () => _showAction(context, action),
+                  key: action == 'Aplicar' ? const Key('studio.apply') : null,
+                  onPressed: () => _runAction(context, action, controller),
                   child: Text(action),
                 ),
             ],
+          ),
+        ),
+        const Divider(height: 1),
+        SizedBox(
+          height: 120,
+          child: _ApplyStatusPanel(
+            key: const Key('studio.apply.status'),
+            controller: controller,
           ),
         ),
         const Divider(height: 1),
@@ -266,10 +278,88 @@ class _StudioShellState extends State<StudioShell> {
     );
   }
 
+  /// Validar y Aplicar pasan por el controller; el resto sigue siendo
+  /// placeholder (T28/V7) y conserva su snackbar heredado.
+  void _runAction(
+    BuildContext context,
+    String action,
+    StudioController controller,
+  ) {
+    if (action == 'Validar') {
+      controller.validateDocument();
+    } else if (action == 'Aplicar') {
+      controller.applyDocument();
+    } else {
+      _showAction(context, action);
+    }
+  }
+
   void _showAction(BuildContext context, String action) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$action: pendiente de implementación (T27)')),
+      SnackBar(
+        content: Text(
+          '$action: pendiente de implementación en un slice posterior',
+        ),
+      ),
     );
+  }
+}
+
+/// Panel de resultados de validar/aplicar (T27): siempre visible y con scroll.
+class _ApplyStatusPanel extends StatelessWidget {
+  const _ApplyStatusPanel({super.key, required this.controller});
+
+  final StudioController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Text(
+            'Resultados',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _rows(controller.lastApplyResult),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _rows(StudioApplyResult? result) {
+    if (result == null) {
+      return const <Widget>[Text('Sin resultados')];
+    }
+    if (result.issues.isNotEmpty) {
+      return <Widget>[
+        for (int i = 0; i < result.issues.length; i++)
+          Text(
+            '${result.issues[i].path}: ${result.issues[i].message}',
+            key: Key('studio.apply.issue.$i'),
+          ),
+      ];
+    }
+    final List<Widget> rows = <Widget>[const Text('Válido')];
+    if (result.written.isEmpty) {
+      rows.add(const Text('Solo validación'));
+      return rows;
+    }
+    rows.add(const Text('Archivos escritos:'));
+    for (int i = 0; i < result.written.length; i++) {
+      rows.add(Text(result.written[i], key: Key('studio.apply.file.$i')));
+    }
+    return rows;
   }
 }
 

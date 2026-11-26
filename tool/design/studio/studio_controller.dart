@@ -17,6 +17,8 @@ import 'package:retro_calculator/core/design_system/token_validation.dart'
 
 import '../artifacts.dart' show designNodeToJson;
 import '../schema.dart';
+import '../validate.dart' show ValidationIssue;
+import 'studio_apply.dart' show StudioApplyResult, applyStudioDocument;
 import 'studio_formula_validation.dart';
 import 'studio_geometry.dart';
 
@@ -223,12 +225,30 @@ Map<String, Map<String, Set<String>>> _copyFlags(
       ),
 );
 
+/// Gate de aplicación inyectable (T27): los tests de UI observan el flag
+/// `write` sin tocar disco. Por defecto se serializa, valida y compila en la
+/// raíz de trabajo real.
+typedef StudioApplyCallback =
+    StudioApplyResult Function(DesignSeed document, {required bool write});
+
+/// Callback real contra disco, ligado a la ruta del documento abierto.
+StudioApplyCallback _diskApplyCallback(String designPath) =>
+    (DesignSeed document, {required bool write}) => applyStudioDocument(
+      document,
+      projectRoot: Directory.current,
+      designPath: designPath,
+      write: write,
+    );
+
 class StudioController extends ChangeNotifier {
   StudioController({
     required DesignSeed document,
     String? screen,
     String? breakpoint,
+    String designPath = studioDefaultDesignPath,
+    StudioApplyCallback? applyCallback,
   }) : _document = document,
+       _designPath = designPath,
        _screen = screen != null && document.screens.containsKey(screen)
            ? screen
            : _firstScreen(document),
@@ -241,9 +261,16 @@ class StudioController extends ChangeNotifier {
            : document.skins.first.id,
        _selectedProfileId = document.profiles.isEmpty
            ? null
-           : document.profiles.first.id;
+           : document.profiles.first.id,
+       _applyCallback = applyCallback ?? _diskApplyCallback(designPath);
 
   DesignSeed _document;
+
+  /// Ruta del documento que usa el callback por defecto.
+  final String _designPath;
+
+  /// Único punto de aplicación; inyectable para probar la UI sin disco.
+  final StudioApplyCallback _applyCallback;
   String _screen;
   String _breakpoint;
   String _selectedNodePath = '';
@@ -281,6 +308,9 @@ class StudioController extends ChangeNotifier {
       document.screens.isEmpty ? '' : document.screens.keys.first;
 
   DesignSeed get document => _document;
+
+  /// Ruta del documento abierto, usada por el callback real de aplicación.
+  String get designPath => _designPath;
 
   /// Pantallas del documento, en orden del JSON.
   List<String> get screens => _document.screens.keys.toList();
@@ -1166,6 +1196,30 @@ class StudioController extends ChangeNotifier {
     if (!value.isFinite) return 0;
     if (!_snappingEnabled) return value;
     return (value / _snapGrid).round() * _snapGrid;
+  }
+
+  // ---------------------------------------------------------------------------
+  // T27 — aplicar: feedback de herramienta, fuera del documento y del undo
+  // ---------------------------------------------------------------------------
+
+  /// Último resultado de validar/aplicar; `null` antes de la primera acción.
+  StudioApplyResult? lastApplyResult;
+
+  List<ValidationIssue> get applyIssues =>
+      lastApplyResult?.issues ?? const <ValidationIssue>[];
+
+  List<String> get appliedFiles => lastApplyResult?.written ?? const <String>[];
+
+  /// Ejecuta solo la barrera de validación: no escribe ni cambia el documento.
+  void validateDocument() {
+    lastApplyResult = _applyCallback(document, write: false);
+    notifyListeners();
+  }
+
+  /// Valida y aplica: tampoco entra en el historial ni en el snapshot.
+  void applyDocument() {
+    lastApplyResult = _applyCallback(document, write: true);
+    notifyListeners();
   }
 
   /// Sustituye el documento abierto, vuelve a la selección inicial y limpia
