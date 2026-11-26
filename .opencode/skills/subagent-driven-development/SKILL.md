@@ -9,7 +9,7 @@ version: "1.0.0"
 license: Apache-2.0
 metadata:
   author: RetroCalculator
-  usage: { count: 0, last_used: null, success_rate: 1.0 }
+  usage: { count: 1, last_used: "2026-11-25", success_rate: 1.0 }
   dependencies: [to-issues, dispatching-parallel-agents, verification-before-completion, git-github-workflow]
   status: active
   category: workflow
@@ -70,6 +70,8 @@ Mantener el contexto de cada agente pequeño y hacer explícita la calidad. En u
    - Commit `type(scope): summary` en inglés con cuerpo en español.
 
 5. **Paralelismo seguro**: despachar implementers en paralelo solo si tocan archivos disjuntos (por ejemplo `calculator` y `settings`); usar `dispatching-parallel-agents` y worktrees separados.
+
+6. **Revisiones delegadas en paralelo (verificado el 2026-11-25)**: enviar spec y calidad juntas, en el mismo turno, a `general` con `opencode/beam-free#max` y sin permisos de escritura; incluir el diff y los criterios completos en cada prompt, no solo «lee el plan». Ambas revisiones deben devolver `APPROVED` antes de mergear. Los subagentes corren en background y reportan al quedar idle.
 
 ## Commands
 
