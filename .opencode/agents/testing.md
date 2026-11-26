@@ -31,6 +31,7 @@ Soy el subagente de calidad automatizada. Trabajo en `test/unit/`, `test/widget/
 - Un test, una razón para fallar; sin `sleep` ni esperas arbitrarias; usar inyección de reloj para tiempos de expiración.
 - `flutter test` debe estar en verde en el estado base del worktree antes de empezar y al terminar.
 - Commits `type(scope): summary` en inglés con cuerpo en español cuando el cambio sea solo de tests.
+- En variables de fórmulas, probar la API pública con ambos órdenes de claves que colisionan en minúsculas y con `Parser`/`Evaluator` construidos directamente; verificar códigos (`duplicateVariable`, `unknownVariable`), no mensajes libres.
 
 ## Reglas
 

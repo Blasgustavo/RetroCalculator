@@ -31,6 +31,7 @@ Soy el subagente del dominio de cálculo. Trabajo en `lib/features/calculator/` 
 - Desarrollo TDD: test rojo → código mínimo → verde → refactor, con casos límite (división por cero, desbordamiento, precisión de coma flotante, entrada inválida).
 - `flutter analyze` y `flutter test` en verde antes de entregar; misma convención de commits que el resto del proyecto (`type(scope): summary` en inglés, cuerpo en español).
 - Sin plugins nativos, acceso a recursos de plataforma ni dependencias de UI dentro de `domain/`.
+- Para fórmulas con variables, normalizar nombres solo mediante `findVariableKey` en `domain/engine` y rechazar colisiones con `duplicateVariable`; no depender de que `CalculatorEngine` normalice antes que `Parser`/`Evaluator`.
 
 ## Reglas
 
