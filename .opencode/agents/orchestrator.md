@@ -14,6 +14,8 @@ permission:
     testing: allow
     docs: allow
     infra: allow
+    general: allow
+    explore: allow
 ---
 
 # Orquestador
