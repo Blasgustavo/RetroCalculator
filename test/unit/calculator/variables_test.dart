@@ -6,6 +6,9 @@ import 'package:retro_calculator/features/calculator/domain/capabilities/basic_c
 import 'package:retro_calculator/features/calculator/domain/capabilities/scientific_capability.dart';
 import 'package:retro_calculator/features/calculator/domain/engine/angle_mode.dart';
 import 'package:retro_calculator/features/calculator/domain/engine/calculator_engine.dart';
+import 'package:retro_calculator/features/calculator/domain/engine/evaluator.dart';
+import 'package:retro_calculator/features/calculator/domain/engine/lexer.dart';
+import 'package:retro_calculator/features/calculator/domain/engine/parser.dart';
 import 'package:retro_calculator/features/calculator/domain/profiles/calculator_profile.dart';
 
 void main() {
@@ -110,6 +113,20 @@ void main() {
       ),
       throwsCode('duplicateVariable'),
     );
+  });
+
+  test('parser y evaluador directos coinciden con claves mixtas', () {
+    final Map<String, num> variables = <String, num>{'Base': 1};
+    final tree = Parser(
+      const Lexer().tokenize('base'),
+      variables: variables,
+    ).parse();
+    final double result = Evaluator(
+      const BasicCapability(),
+      AngleMode.degrees,
+      variables: variables,
+    ).evaluate(tree);
+    expect(result, 1.0);
   });
 
   test('rechaza identificadores con caracteres no ASCII según el lexer', () {

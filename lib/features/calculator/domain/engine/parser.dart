@@ -2,6 +2,7 @@ import '../../../../core/errors/calculator_exception.dart';
 import 'ast.dart';
 import 'engine_limits.dart';
 import 'token.dart';
+import 'variable_lookup.dart';
 
 class Parser {
   Parser(this._tokens, {this.variables});
@@ -31,12 +32,8 @@ class Parser {
   ExprNode _identifier(String lexeme) {
     final String name = lexeme.toLowerCase();
     final Map<String, num>? declared = variables;
-    if (declared != null) {
-      for (final String key in declared.keys) {
-        if (key.toLowerCase() == name) {
-          return VariableNode(name);
-        }
-      }
+    if (declared != null && findVariableKey(declared, name) != null) {
+      return VariableNode(name);
     }
     return ConstantNode(name);
   }

@@ -5,6 +5,7 @@ import '../capabilities/capability.dart';
 import 'angle_mode.dart';
 import 'ast.dart';
 import 'engine_limits.dart';
+import 'variable_lookup.dart';
 
 /// Estado de una sola evaluación: cuenta visitas totales (no por rama) y
 /// niveles de recursión activos. Se crea en [Evaluator.evaluate], por lo que
@@ -89,9 +90,11 @@ class Evaluator {
 
   double _variable(String name) {
     final Map<String, num>? declared = variables;
-    final String key = name.toLowerCase();
-    if (declared != null && declared.containsKey(key)) {
-      return declared[key]!.toDouble();
+    if (declared != null) {
+      final String? key = findVariableKey(declared, name);
+      if (key != null) {
+        return declared[key]!.toDouble();
+      }
     }
     throw const CalculatorException('unknownVariable');
   }
