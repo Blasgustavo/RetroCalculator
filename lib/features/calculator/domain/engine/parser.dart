@@ -1,12 +1,15 @@
 import '../../../../core/errors/calculator_exception.dart';
 import 'ast.dart';
+import 'engine_limits.dart';
 import 'token.dart';
 
 class Parser {
-  Parser(this._tokens);
+  Parser(this._tokens, {this.variables});
 
   final List<Token> _tokens;
+  final Map<String, num>? variables;
   int _index = 0;
+  int _depth = 0;
 
   ExprNode parse() {
     if (_tokens.isEmpty) {
@@ -20,6 +23,31 @@ class Parser {
   }
 
   Token? get _current => _index < _tokens.length ? _tokens[_index] : null;
+
+  /// Los identificadores declarados se resuelven como variables; el resto
+  /// siguen siendo constantes para no romper `pi`/`e` ni el modo normal.
+  ExprNode _identifier(String lexeme) {
+    final String name = lexeme.toLowerCase();
+    final Map<String, num>? declared = variables;
+    if (declared != null && declared.containsKey(name)) {
+      return VariableNode(name);
+    }
+    return ConstantNode(name);
+  }
+
+  /// Cota del anidamiento del parser: evita desbordar la pila antes de que el
+  /// evaluador pueda comprobar sus propios límites.
+  T _descend<T>(T Function() body) {
+    _depth++;
+    if (_depth > EngineLimits.maxAstDepth) {
+      throw const CalculatorException('maxDepthExceeded');
+    }
+    try {
+      return body();
+    } finally {
+      _depth--;
+    }
+  }
 
   bool _matchOperator(String lexeme) {
     final Token? token = _current;
@@ -60,10 +88,10 @@ class Parser {
 
   ExprNode _parseUnary() {
     if (_matchOperator('+')) {
-      return _parseUnary();
+      return _descend(_parseUnary);
     }
     if (_matchOperator('-')) {
-      return UnaryNode('-', _parseUnary());
+      return UnaryNode('-', _descend(_parseUnary));
     }
     return _parsePower();
   }
@@ -71,7 +99,7 @@ class Parser {
   ExprNode _parsePower() {
     final ExprNode base = _parsePostfix();
     if (_matchOperator('^')) {
-      return BinaryNode('^', base, _parseUnary());
+      return BinaryNode('^', base, _descend(_parseUnary));
     }
     return base;
   }
@@ -100,7 +128,7 @@ class Parser {
     }
     if (token.type == TokenType.leftParen) {
       _index++;
-      final ExprNode node = _parseAdditive();
+      final ExprNode node = _descend(_parseAdditive);
       final Token? closing = _current;
       if (closing == null || closing.type != TokenType.rightParen) {
         throw const CalculatorException('unbalancedParentheses');
@@ -113,7 +141,7 @@ class Parser {
       final Token? next = _current;
       if (next != null && next.type == TokenType.leftParen) {
         _index++;
-        final ExprNode argument = _parseAdditive();
+        final ExprNode argument = _descend(_parseAdditive);
         final Token? closing = _current;
         if (closing == null || closing.type != TokenType.rightParen) {
           throw const CalculatorException('unbalancedParentheses');
@@ -121,7 +149,7 @@ class Parser {
         _index++;
         return FunctionNode(token.lexeme.toLowerCase(), argument);
       }
-      return ConstantNode(token.lexeme.toLowerCase());
+      return _identifier(token.lexeme);
     }
     throw const CalculatorException('invalidExpression');
   }

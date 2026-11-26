@@ -12,6 +12,15 @@ class ConstantNode extends ExprNode {
   final String name;
 }
 
+/// Variable declarada en el mapa inyectado por la capa que invoca al motor.
+///
+/// Comparte `name` con [ConstantNode] para que los validadores existentes
+/// sigan siendo exhaustivos sin tocar `tool/`; el evaluador distingue ambos
+/// casos porque comprueba [VariableNode] antes que [ConstantNode].
+class VariableNode extends ConstantNode {
+  const VariableNode(super.name);
+}
+
 class UnaryNode extends ExprNode {
   const UnaryNode(this.operator, this.operand);
   final String operator;
