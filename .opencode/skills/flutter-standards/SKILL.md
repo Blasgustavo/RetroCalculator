@@ -10,7 +10,7 @@ version: "1.0.0"
 license: Apache-2.0
 metadata:
   author: RetroCalculator
-  usage: { count: 6, last_used: "2026-11-26", success_rate: 1.0 }
+  usage: { count: 7, last_used: "2026-11-26", success_rate: 1.0 }
   dependencies: []
   status: active
   category: flutter
@@ -143,6 +143,10 @@ Fijar una única estructura para que calculadora, skins, monetización y platafo
 
     `design/app.design.json` es la única fuente de verdad y `dart run tool/design/validate.dart [archivo]` responde `✓ válido` o errores numerados con ruta JSON. El validador reutiliza `validateTokens`, `colorKeys` y `minValues` de `token_validation.dart` en lugar de duplicar las reglas de contraste y 48 dp. Las claves ARB van en camelCase porque `flutter gen-l10n` rechaza puntos (ADR-0012), y los cinco assets referenciados por la semilla se versionan como placeholders para que la validación de existencia sea real. `default` usa `keyMinHeight: 48` mientras `SkinTokens.classicAmber` sigue en 44 y los goldens se difieren a V9: la migración visual no se adelanta al slice que la valida. Verificado en V1 del Studio (PR #10): 56/56 tests, `flutter analyze` 0 issues, `dart format` sin cambios y `✓ válido`.
 
+13. **Fórmulas declarativas: normalización única y errores por código (verificado y confirmado el 2026-11-26)**
+
+    El AST añade `VariableNode` sin `eval` ni `dart:mirrors`; `CalculatorEngine.evaluate(..., variables:)` inyecta un mapa opcional y acota 200 nodos y 64 niveles. Los fallos se exponen como códigos de `CalculatorException`: `unknownVariable`, `duplicateVariable`, `stepBudgetExceeded` y `maxDepthExceeded`. La comparación de nombres va en un único helper puro (`findVariableKey`) usado por `Parser` y `Evaluator`: normalizar solo en `CalculatorEngine` deja un fallo oculto al construir ambos directamente, y un map literal `for` hace que el ganador de claves que colisionan en minúsculas dependa del orden de inserción. Por eso las colisiones se rechazan con `duplicateVariable` y se prueban ambos órdenes a través de la API pública, sin tocar privados. `VariableNode extends ConstantNode` se tolera solo mientras los validadores build-time no inyecten variables; en T33 deben pasar a `case VariableNode():`. Verificado en V5 T29–T31 (PR #27): 12/12 en `variables_test.dart`, 181/181 en unit+widget, `flutter analyze` 0 issues y CI `success`.
+
 ## Commands
 
 ```bash
@@ -167,6 +171,7 @@ flutter build ios --no-codesign
 
 - Importar `package:flutter/*` en `lib/features/calculator/domain/`.
 - Usar `eval`, `dart:mirrors` o un paquete externo para evaluar la expresión.
+- Normalizar variables con un map literal `for` o solo en `CalculatorEngine`: las claves duplicadas cambian de valor según el orden y `Parser`/`Evaluator` directos divergen. Usar `findVariableKey` y rechazar colisiones con `duplicateVariable`.
 - Meter la lógica de cálculo en un `StatefulWidget` o en el `ViewModel`.
 - Hacer que una skin desbloquee el modo científico o cambie el resultado.
 - Llamar a AdMob, Google Play Billing o complementos nativos desde `presentation/` sin pasar por `lib/platform/`.
