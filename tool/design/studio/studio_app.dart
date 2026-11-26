@@ -310,15 +310,26 @@ class _CanvasPanel extends StatelessWidget {
                           ),
                         ),
                         for (int i = 0; i < controller.currentNodes.length; i++)
-                          _NodeBox(
-                            path: '$i',
-                            node: controller.currentNodes[i],
-                            controller: controller,
-                          ),
+                          if (!controller.isNodeHidden('$i'))
+                            _NodeBox(
+                              path: '$i',
+                              node: controller.currentNodes[i],
+                              controller: controller,
+                            ),
                         // Las manillas son hermanas de las cajas, no hijas:
                         // así su gesto de resize no compite con el de mover.
+                        // Un nodo oculto o bloqueado (por sí mismo o por un
+                        // ancestro) no dibuja manillas aunque siga seleccionado
+                        // para el inspector: no ofrecer gestos que no hacen
+                        // nada (T24).
                         if (selected != null &&
-                            controller.selectedNodePath.isNotEmpty)
+                            controller.selectedNodePath.isNotEmpty &&
+                            !controller.isNodeHidden(
+                              controller.selectedNodePath,
+                            ) &&
+                            !controller.isNodeEffectivelyLocked(
+                              controller.selectedNodePath,
+                            ))
                           for (final StudioResizeHandle handle
                               in StudioResizeHandle.values)
                             _ResizeHandle(
@@ -404,7 +415,13 @@ class _NodeBoxState extends State<_NodeBox> {
               child: SizedBox(
                 width: geometry.width,
                 child: SpecRenderer(
-                  nodes: <Object?>[designNodeToJson(widget.node)],
+                  nodes: <Object?>[
+                    _visibleNodeJson(
+                      widget.controller,
+                      widget.node,
+                      widget.path,
+                    ),
+                  ],
                   renderContext: const SpecRenderContext(),
                 ),
               ),
@@ -553,6 +570,35 @@ class _LayersPanel extends StatelessWidget {
     return rows;
   }
 
+  /// Botón compacto de una fila: cuatro por fila caben en el panel de 200 dp.
+  /// `IconButton.constraints` no basta porque el estilo del botón fija un
+  /// mínimo de 48 dp: hay que fijar también `minimumSize`/`maximumSize`.
+  Widget _layerButton({
+    required Key key,
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback? onPressed,
+  }) {
+    return SizedBox(
+      width: 24,
+      height: 24,
+      child: IconButton(
+        key: key,
+        icon: Icon(icon),
+        tooltip: tooltip,
+        onPressed: onPressed,
+        iconSize: 16,
+        style: ButtonStyle(
+          fixedSize: WidgetStateProperty.all<Size>(const Size(24, 24)),
+          minimumSize: WidgetStateProperty.all<Size>(const Size(24, 24)),
+          maximumSize: WidgetStateProperty.all<Size>(const Size(24, 24)),
+          padding: WidgetStateProperty.all<EdgeInsetsGeometry>(EdgeInsets.zero),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ),
+    );
+  }
+
   /// Fila de un nodo con su ruta ya resuelta y las de sus descendientes:
   /// `child` único → `'$path.c'`, `children[i]` → `'$path.$i'`.
   List<Widget> _nodeRows(
@@ -561,13 +607,63 @@ class _LayersPanel extends StatelessWidget {
     String path,
     int depth,
   ) {
+    final bool hidden = controller.isNodeHidden(path);
+    final bool ownLocked = controller.isNodeLocked(path);
+    final bool locked = controller.isNodeEffectivelyLocked(path);
     final List<Widget> rows = <Widget>[
       ListTile(
         dense: true,
         contentPadding: EdgeInsets.only(left: 8 + depth * 12, right: 8),
         selected: controller.selectedNodePath == path,
         onTap: () => controller.selectNode(path),
-        title: Text(studioNodeLabel(node)),
+        title: Text(
+          studioNodeLabel(node),
+          overflow: TextOverflow.ellipsis,
+          style: hidden
+              ? const TextStyle(
+                  color: Color(0xFF78909C),
+                  fontStyle: FontStyle.italic,
+                )
+              : null,
+        ),
+        trailing: SizedBox(
+          width: 96,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              _layerButton(
+                key: Key('studio.layer.eye.$path'),
+                icon: hidden ? Icons.visibility_off : Icons.visibility,
+                tooltip: hidden ? 'Mostrar' : 'Ocultar',
+                onPressed: locked
+                    ? null
+                    : () => controller.setNodeHidden(path, !hidden),
+              ),
+              _layerButton(
+                key: Key('studio.layer.lock.$path'),
+                icon: ownLocked ? Icons.lock : Icons.lock_open,
+                tooltip: ownLocked ? 'Desbloquear' : 'Bloquear',
+                onPressed: () => controller.setNodeLocked(path, !ownLocked),
+              ),
+              _layerButton(
+                key: Key('studio.layer.up.$path'),
+                icon: Icons.arrow_upward,
+                tooltip: 'Subir',
+                onPressed: controller.canMoveLayer(path, up: true)
+                    ? () => controller.moveLayer(path, up: true)
+                    : null,
+              ),
+              _layerButton(
+                key: Key('studio.layer.down.$path'),
+                icon: Icons.arrow_downward,
+                tooltip: 'Bajar',
+                onPressed: controller.canMoveLayer(path, up: false)
+                    ? () => controller.moveLayer(path, up: false)
+                    : null,
+              ),
+            ],
+          ),
+        ),
       ),
     ];
     final DesignNode? child = node.child;
@@ -624,6 +720,38 @@ class _InspectorPanel extends StatelessWidget {
       ],
     );
   }
+}
+
+/// JSON del spec con los descendientes ocultos eliminados solo para el
+/// render del editor. No toca `currentSpec`: el documento publicable sigue
+/// completo y `designNodeToJson` conserva su contrato (ADR-0015).
+Map<String, Object?> _visibleNodeJson(
+  StudioController controller,
+  DesignNode node,
+  String path,
+) {
+  final Map<String, Object?> json = designNodeToJson(node);
+  final DesignNode? child = node.child;
+  if (child != null) {
+    final String childPath = '$path.c';
+    if (controller.isNodeHidden(childPath)) {
+      json.remove('child');
+    } else {
+      json['child'] = _visibleNodeJson(controller, child, childPath);
+    }
+  }
+  final List<DesignNode>? children = node.children;
+  if (children != null) {
+    final List<Object?> visible = <Object?>[];
+    for (int i = 0; i < children.length; i++) {
+      final String childPath = '$path.$i';
+      if (!controller.isNodeHidden(childPath)) {
+        visible.add(_visibleNodeJson(controller, children[i], childPath));
+      }
+    }
+    json['children'] = visible;
+  }
+  return json;
 }
 
 /// Etiqueta de un nodo en el árbol de capas: tipo + el primer detalle útil.
