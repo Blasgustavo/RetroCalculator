@@ -10,7 +10,7 @@ version: "1.0.0"
 license: Apache-2.0
 metadata:
   author: RetroCalculator
-  usage: { count: 5, last_used: "2026-11-26", success_rate: 1.0 }
+  usage: { count: 6, last_used: "2026-11-26", success_rate: 1.0 }
   dependencies: []
   status: active
   category: flutter
@@ -139,6 +139,10 @@ Fijar una única estructura para que calculadora, skins, monetización y platafo
 
     `Aplicar` es el único gate que serializa, valida con `validate.dart` y compila: si hay issues no escribe nada. `Guardar` solo persiste el JSON canónico (LF y un único `\n` final); `Recargar` sustituye el documento con `loadDocument`, limpia historial y descarta el feedback de `Aplicar` del documento anterior. Los módulos de herramienta bajo `tool/design/studio/` que serializan o escriben son Dart puro: toman la ruta por defecto de `compile.dart` (`defaultDesignPath`) y nunca importan `studio_controller.dart`, porque arrastra Flutter y crea un ciclo innecesario. El feedback de validar/aplicar/guardar/recargar queda fuera del snapshot de undo (ADR-0015). El preview usa `SpecRenderer` con `currentSpec`, sin aplicar el filtro de nodos ocultos del editor. Verificado en V4 T27/T28: 156/156 y 169/169 en unit+widget, `flutter analyze` 0 issues y CI Linux en verde.
 
+12. **Studio V1: semilla única, validación compartida y ARB camelCase (verificado el 2026-11-25, confirmado el 2026-11-26)**
+
+    `design/app.design.json` es la única fuente de verdad y `dart run tool/design/validate.dart [archivo]` responde `✓ válido` o errores numerados con ruta JSON. El validador reutiliza `validateTokens`, `colorKeys` y `minValues` de `token_validation.dart` en lugar de duplicar las reglas de contraste y 48 dp. Las claves ARB van en camelCase porque `flutter gen-l10n` rechaza puntos (ADR-0012), y los cinco assets referenciados por la semilla se versionan como placeholders para que la validación de existencia sea real. `default` usa `keyMinHeight: 48` mientras `SkinTokens.classicAmber` sigue en 44 y los goldens se difieren a V9: la migración visual no se adelanta al slice que la valida. Verificado en V1 del Studio (PR #10): 56/56 tests, `flutter analyze` 0 issues, `dart format` sin cambios y `✓ válido`.
+
 ## Commands
 
 ```bash
@@ -176,6 +180,8 @@ flutter build ios --no-codesign
 - Hacer que Guardar valide/compile o que Aplicar escriba sin pasar por `validate.dart`: son flujos distintos del Studio.
 - Importar `studio_controller.dart` desde un módulo de persistencia/serialización bajo `tool/` para reutilizar una constante: usar `defaultDesignPath` de `compile.dart` y mantener el módulo Dart puro.
 - Conservar `lastApplyResult` tras Recargar o meter el feedback de validar/aplicar/guardar/recargar en el historial de undo.
+- Usar puntos en claves ARB (flutter gen-l10n las rechaza) o referenciar assets no versionados y relajar la validación de existencia para que pase el CLI.
+- Duplicar en el validador del Studio las reglas de tokens/contraste que ya están en `token_validation.dart`.
 - Reemplazar en un slice de migración un manifiesto o una skin que ya consume la app: emitir el formato nuevo en paralelo y migrar al cliente en su slice.
 - Copiar convenciones de NestJS, Angular, Leaflet o del dominio FieldOps de ElectroSys.
 
