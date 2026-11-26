@@ -320,7 +320,7 @@ Orden de ejecución: **V0 → V1 → V2 → V3 → V4 → V5 → V6 → V7 → V
 
 ### V4 — Editor visual (T21–T28)
 
-- [ ] **T21 — Shell.** Entrypoint `lib/tool_preview_main.dart`: paleta, canvas, capas, inspector, selector de breakpoint, botones Guardar/Validar/Compilar/Publicar.
+- [ ] **T21 — Shell.** Entrypoint `tool/design/studio/main.dart` (ADR-0014; `flutter run -t tool/design/studio/main.dart`): paleta, canvas, capas, inspector, selector de breakpoint, botones Guardar/Validar/Compilar/Publicar.
 - [ ] **T22 — Drag & drop.** Arrastrar un nodo de la paleta al canvas crea un `ScreenSpec` válido; feedback visual inmediato.
 - [ ] **T23 — Move/resize.** Manillas, snapping y límites; `keyMinHeight` nunca baja de 48 dp.
 - [ ] **T24 — Capas.** Reordenar, ocultar y bloquear nodos; sincronizado con el árbol del spec.
