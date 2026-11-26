@@ -19,11 +19,11 @@ ADR-0009 define fórmulas declarativas con `inputs` y un mapa `formulas`, sin `e
 
 ## Tareas (2-5 min cada una)
 
-- [ ] T33.0 — Registrar ADR-0016.
+- [x] T33.0 — Registrar ADR-0016.
   Archivo: `docs/adr/0016-presupuesto-y-normalizacion-de-formulas.md`.
   Verificar: `git diff --check`.
 
-- [ ] T33.1 — Crear el helper compartido.
+- [x] T33.1 — Crear el helper compartido.
   Archivo: `tool/design/formula_validation.dart`.
   Código base:
 
@@ -121,22 +121,22 @@ ADR-0009 define fórmulas declarativas con `inputs` y un mapa `formulas`, sin `e
 
   Verificar: `dart analyze tool/design/formula_validation.dart`.
 
-- [ ] T33.2 — Conectar el validador build-time.
+- [x] T33.2 — Conectar el validador build-time.
   Archivos: `tool/design/validate.dart`, `tool/design/schema.dart`.
   Cambios: importar `formula_validation.dart show validateFormula`; `_validateFormula` delega parseo y recorrido, convierte cada `FormulaIssue` en `ValidationIssue(path, issue.message)` y devuelve `result.dependencies`; eliminar `_FormulaBudget`, `_walkFormula` y los imports de `ast.dart`/`lexer.dart`/`parser.dart`/`calculator_exception.dart` que queden sin uso; borrar `maxFormulaSteps`/`maxFormulaDepth` de `schema.dart`.
   Verificar: `dart run tool/design/validate.dart` → `✓ válido`.
 
-- [ ] T33.3 — Conectar el espejo del Studio.
+- [x] T33.3 — Conectar el espejo del Studio.
   Archivo: `tool/design/studio/studio_formula_validation.dart`.
   Cambios: `validateStudioFormula` delega en `validateFormula` y devuelve `result.issues.map((e) => e.message).toList(growable: false)`; borrar `_FormulaCheck`, el import de `schema.dart` y los imports de AST/lexer/parser sin uso. Conservar `maxFormulaLength` reexportado desde el helper si algún caller lo usa.
   Verificar: `flutter test --no-pub test/unit/design/studio_inspector_test.dart`.
 
-- [ ] T33.4 — Tests de regresión.
+- [x] T33.4 — Tests de regresión.
   Archivo: `test/unit/design/validate_formula_variables_test.dart` (nuevo).
   Casos: `base*(1+tasa/100)` con `inputs: ['base','tasa']` válido; `Base` y `BASE` juntos producen `duplicateVariable` y cero artefactos al compilar; identificador no declarado produce `variable no declarada: otro`; `pi` falla en `basic` y pasa en `scientific`; una concatenación de 51 `(1+1)` produce el aviso de 200 nodos; 70 `1+` produce `fórmula demasiado profunda`; ambos órdenes de duplicados dan el mismo issue.
   Verificar: `flutter test --no-pub test/unit/design/validate_formula_variables_test.dart`.
 
-- [ ] T33.5 — Verificación final.
+- [x] T33.5 — Verificación final.
   Comandos: `flutter analyze --no-pub`, `flutter test --no-pub test/unit test/widget`, `dart run tool/design/validate.dart`, `dart run tool/design/compile.dart && git diff --exit-code`, `dart format --output=none --set-exit-if-changed`, `git diff --check`. Tras cualquier `flutter pub get`, `git restore -- windows/flutter/`.
 
 ## Riesgos

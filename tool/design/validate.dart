@@ -7,14 +7,12 @@ import 'dart:io';
 
 import 'package:retro_calculator/core/design_system/token_validation.dart'
     as token_rules;
-import 'package:retro_calculator/core/errors/calculator_exception.dart';
 import 'package:retro_calculator/features/calculator/domain/capabilities/basic_capability.dart';
 import 'package:retro_calculator/features/calculator/domain/capabilities/capability.dart';
 import 'package:retro_calculator/features/calculator/domain/capabilities/scientific_capability.dart';
-import 'package:retro_calculator/features/calculator/domain/engine/ast.dart';
-import 'package:retro_calculator/features/calculator/domain/engine/lexer.dart';
-import 'package:retro_calculator/features/calculator/domain/engine/parser.dart';
 
+import 'formula_validation.dart'
+    show FormulaIssue, FormulaValidation, validateFormula;
 import 'schema.dart';
 
 class ValidationIssue {
@@ -67,10 +65,6 @@ class _PngSize {
 
   final int width;
   final int height;
-}
-
-class _FormulaBudget {
-  int steps = 0;
 }
 
 List<ValidationIssue> validateJson(
@@ -438,6 +432,8 @@ void _validateProfiles(DesignSeed design, List<ValidationIssue> issues) {
         ),
       );
     }
+    final String inputsPath = 'profiles[$i].inputs';
+    final Set<String> reportedDuplicates = <String>{};
     for (final MapEntry<String, String> formula in profile.formulas.entries) {
       final String path = 'profiles[$i].formulas.${formula.key}';
       formulaPaths[formula.key] = path;
@@ -450,6 +446,8 @@ void _validateProfiles(DesignSeed design, List<ValidationIssue> issues) {
             .expand((ProfileSpec p) => p.formulas.keys)
             .toSet(),
         path: path,
+        inputsPath: inputsPath,
+        reportedDuplicates: reportedDuplicates,
         issues: issues,
       );
     }
@@ -467,161 +465,29 @@ Set<String> _validateFormula({
   required CalculatorCapability capability,
   required Set<String> formulaNames,
   required String path,
+  required String inputsPath,
+  required Set<String> reportedDuplicates,
   required List<ValidationIssue> issues,
 }) {
-  final Set<String> dependencies = <String>{};
-  if (expression.trim().isEmpty) {
-    issues.add(ValidationIssue(path, 'fórmula vacía'));
-    return dependencies;
-  }
-  if (expression.length > 256) {
-    issues.add(ValidationIssue(path, 'fórmula demasiado larga'));
-    return dependencies;
-  }
-  final ExprNode parsed;
-  try {
-    parsed = Parser(const Lexer().tokenize(expression)).parse();
-  } on CalculatorException catch (error) {
-    issues.add(
-      ValidationIssue(path, 'fórmula con sintaxis inválida (${error.message})'),
-    );
-    return dependencies;
-  }
-  final _FormulaBudget budget = _FormulaBudget();
-  _walkFormula(
-    node: parsed,
-    depth: 0,
+  final FormulaValidation result = validateFormula(
     name: name,
-    declared: inputs.toSet(),
-    dependencies: dependencies,
+    expression: expression,
+    inputs: inputs,
     formulaNames: formulaNames,
     functions: capability.functions,
     constants: capability.constants,
-    budget: budget,
-    path: path,
-    issues: issues,
   );
-  if (budget.steps > maxFormulaSteps) {
-    issues.add(
-      ValidationIssue(
-        path,
-        'fórmula excede el presupuesto de $maxFormulaSteps pasos',
-      ),
-    );
+  for (final FormulaIssue issue in result.issues) {
+    if (issue.code == 'duplicateVariable') {
+      // La colisión es del array de entradas, no de una fórmula concreta: se
+      // informa una sola vez en la ruta del perfil (ADR-0016).
+      if (!reportedDuplicates.add(issue.message)) continue;
+      issues.add(ValidationIssue(inputsPath, issue.message));
+    } else {
+      issues.add(ValidationIssue(path, issue.message));
+    }
   }
-  return dependencies;
-}
-
-void _walkFormula({
-  required ExprNode node,
-  required int depth,
-  required String name,
-  required Set<String> declared,
-  required Set<String> dependencies,
-  required Set<String> formulaNames,
-  required Set<String> functions,
-  required Set<String> constants,
-  required _FormulaBudget budget,
-  required String path,
-  required List<ValidationIssue> issues,
-}) {
-  budget.steps++;
-  if (budget.steps > maxFormulaSteps || depth > maxFormulaDepth) {
-    return;
-  }
-  switch (node) {
-    case NumberNode():
-      return;
-    case ConstantNode():
-      final String identifier = node.name.toLowerCase();
-      if (identifier == name.toLowerCase()) {
-        issues.add(ValidationIssue(path, 'fórmula recursiva: $identifier'));
-        return;
-      }
-      if (formulaNames.contains(identifier)) {
-        dependencies.add(identifier);
-        return;
-      }
-      if (declared.contains(identifier) || constants.contains(identifier)) {
-        return;
-      }
-      issues.add(ValidationIssue(path, 'variable no declarada: ${node.name}'));
-    case FunctionNode():
-      if (!functions.contains(node.name.toLowerCase())) {
-        issues.add(ValidationIssue(path, 'función no permitida: ${node.name}'));
-      }
-      _walkFormula(
-        node: node.argument,
-        depth: depth + 1,
-        name: name,
-        declared: declared,
-        dependencies: dependencies,
-        formulaNames: formulaNames,
-        functions: functions,
-        constants: constants,
-        budget: budget,
-        path: path,
-        issues: issues,
-      );
-    case UnaryNode():
-      _walkFormula(
-        node: node.operand,
-        depth: depth + 1,
-        name: name,
-        declared: declared,
-        dependencies: dependencies,
-        formulaNames: formulaNames,
-        functions: functions,
-        constants: constants,
-        budget: budget,
-        path: path,
-        issues: issues,
-      );
-    case BinaryNode():
-      for (final ExprNode child in <ExprNode>[node.left, node.right]) {
-        _walkFormula(
-          node: child,
-          depth: depth + 1,
-          name: name,
-          declared: declared,
-          dependencies: dependencies,
-          formulaNames: formulaNames,
-          functions: functions,
-          constants: constants,
-          budget: budget,
-          path: path,
-          issues: issues,
-        );
-      }
-    case FactorialNode():
-      _walkFormula(
-        node: node.operand,
-        depth: depth + 1,
-        name: name,
-        declared: declared,
-        dependencies: dependencies,
-        formulaNames: formulaNames,
-        functions: functions,
-        constants: constants,
-        budget: budget,
-        path: path,
-        issues: issues,
-      );
-    case PercentNode():
-      _walkFormula(
-        node: node.operand,
-        depth: depth + 1,
-        name: name,
-        declared: declared,
-        dependencies: dependencies,
-        formulaNames: formulaNames,
-        functions: functions,
-        constants: constants,
-        budget: budget,
-        path: path,
-        issues: issues,
-      );
-  }
+  return result.dependencies;
 }
 
 void _detectFormulaCycles(
