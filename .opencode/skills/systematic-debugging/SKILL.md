@@ -10,7 +10,7 @@ version: "1.0.0"
 license: Apache-2.0
 metadata:
   author: RetroCalculator
-  usage: { count: 1, last_used: "2026-11-25", success_rate: 1.0 }
+  usage: { count: 2, last_used: "2026-11-25", success_rate: 1.0 }
   dependencies: [verification-before-completion, test-driven-development, flutter-standards]
   status: active
   category: testing
@@ -87,7 +87,9 @@ Evitar "fixes" que esconden el problema. En RetroCalculator los fallos suelen ve
 
    Al sustituir un widget por un renderer o una pantalla nueva, compara el widget antiguo con el nuevo buscando llamadas con efecto secundario (`loadCatalog`, `addPostFrameCallback`, suscripciones). Un test heredado verde no demuestra que se conservaron: la semilla del repositorio puede enmascarar la pérdida. Reproduce con un test de widget que inyecte una fuente falsa (`SkinManifestSource` en memoria, sin red) y compruebe el efecto observable, por ejemplo que una skin del manifiesto remoto aparece en el selector. Verificado en V3 del Studio: `SkinSelector` era el único punto que llamaba a `loadCatalog`; al cambiarlo por `SkinSelectorScreen` la carga desapareció y el test `test/widget/skin_catalog_load_test.dart` falló con `['classic_amber', 'lcd_classica']` antes del fix.
 
-6. **Reglas duras**: no borrar un test que falla; no cambiar la expectativa para que pase; no añadir `try/catch` que trague el error; si después de dos hipótesis no hay causa, escalar con `NEEDS_CONTEXT` o `BLOCKED` al orquestador.
+6. **Worktree nuevo sin package config (verificado el 2026-11-25)**: `flutter test --no-pub` en un worktree recién creado crashea con `Bad state: No element` en `testCompilerBuildNativeAssets`, porque no existe `.dart_tool/package_config.json` con el `root` del proyecto. La capa es de entorno, no de dominio: ejecutar `flutter pub get` en ese worktree y relanzar analyze y test. Si pub get regenera artefactos Windows, restaurarlos con `git restore -- windows/flutter/`. No parchear el test ni cambiar `--no-pub` en el proyecto.
+
+7. **Reglas duras**: no borrar un test que falla; no cambiar la expectativa para que pase; no añadir `try/catch` que trague el error; si después de dos hipótesis no hay causa, escalar con `NEEDS_CONTEXT` o `BLOCKED` al orquestador.
 
 ## Commands
 
@@ -107,6 +109,7 @@ flutter build apk --debug
 - Borrar o saltar (`skip`) el test que falla.
 - Dar por correcta una migración de UI porque los tests heredados pasan, sin comprobar los efectos de `initState` del widget sustituido.
 - Culpar a Flutter o al plugin antes de aislar con un test unitario.
+- Tratar un crash de `testCompilerBuildNativeAssets` en un worktree nuevo como bug del motor: es falta de `flutter pub get`.
 - Reportar "arreglado" sin volver a ejecutar `flutter test` y `flutter analyze`.
 
 ## Related Skills

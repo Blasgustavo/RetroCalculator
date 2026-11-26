@@ -10,7 +10,7 @@ version: "1.0.0"
 license: Apache-2.0
 metadata:
   author: RetroCalculator
-  usage: { count: 0, last_used: null, success_rate: 1.0 }
+  usage: { count: 1, last_used: "2026-11-25", success_rate: 1.0 }
   dependencies: [git-github-workflow, writing-plans]
   status: active
   category: workflow
@@ -52,7 +52,7 @@ Permitir que el motor, las skins y la monetización avancen en branches separada
    flutter test
    ```
 
-   El baseline debe estar en verde; si no lo está, se documenta y se corrige antes de implementar, para no confundir regresiones propias con fallos previos.
+   El baseline debe estar en verde; si no lo está, se documenta y se corrige antes de implementar, para no confundir regresiones propias con fallos previos. Un worktree recién creado no tiene `.dart_tool/package_config.json`: ejecutar siempre `flutter pub get` antes de testear, porque `flutter test --no-pub` sin ese archivo crashea en `testCompilerBuildNativeAssets` con `Bad state: No element` (verificado el 2026-11-25). Tras pub get, restaurar artefactos Windows con `git restore -- windows/flutter/`.
 
 3. **Nomenclatura coherente con el flujo**
 
@@ -92,6 +92,7 @@ git branch -d feature/calculator-engine
 - Implementar directamente sobre `main` "porque es un cambio pequeño".
 - Dos worktrees apuntando a la misma rama.
 - No ejecutar el baseline y culpar al slice de un fallo que ya existía.
+- Saltarse `flutter pub get` en un worktree nuevo y usar `--no-pub` desde el primer test.
 - Olvidar eliminar el worktree tras merge, dejando ramas huérfanas.
 
 ## Related Skills

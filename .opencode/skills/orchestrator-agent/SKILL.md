@@ -10,7 +10,7 @@ version: "1.0.0"
 license: Apache-2.0
 metadata:
   author: RetroCalculator
-  usage: { count: 0, last_used: null, success_rate: 1.0 }
+  usage: { count: 1, last_used: "2026-11-25", success_rate: 1.0 }
   dependencies: [skill-sync, sync-agents, verification-before-completion, flutter-standards]
   status: active
   category: meta
@@ -74,6 +74,8 @@ Ser la capa de decisión del proyecto. El orquestador no resuelve directamente c
 
 4. **Límites de delegación**: no despachar dos implementers sobre los mismos archivos; no saltarse `spec reviewer` ni `quality reviewer`; no avanzar con issues abiertos; entregar al subagente el texto completo de la tarea (que no lea el plan desde disco).
 
+5. **Modelo de la UI frente a modelos delegados (verificado el 2026-11-25)**: el modelo elegido en la UI manda en `orchestrator` y `build`, así que esos agentes no declaran `model` ni `variant`; el `model` raíz es solo fallback. Cada subagente declara un modelo `opencode/*` gratuito explícito: si hereda el modelo de la sesión y el usuario eligió uno de pago, la delegación también sería de pago. Las revisiones de spec y calidad van juntas y en background a `general` con `opencode/beam-free#max` (1M de contexto, `open_weights`, sin entrenamiento, sin `write`/`patch`), y la exploración a `opencode/hy4-flash-free#high`. Ver ADR-0013; no añadir proveedores, claves ni harnesses porque los modelos gratuitos devuelven `403` fuera de OpenCode.
+
 ## Commands
 
 ```bash
@@ -99,6 +101,7 @@ git branch --list 'feature/*' 'fix/*'
 - Decir "compila" sin haber ejecutado `flutter analyze` y `flutter test`.
 - Llamar a `auto-learn` porque sí, sin que el usuario confirme que el cambio fue correcto.
 - Implementar directamente en `main` sin PR ni consentimiento explícito.
+- Fijar `model` en `orchestrator` o `build`, o dejar que un subagente herede el modelo de pago elegido en la UI.
 
 ## Related Skills
 
