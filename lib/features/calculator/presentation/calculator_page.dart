@@ -3,13 +3,14 @@ import 'package:retro_calculator/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/design_system/skin_tokens.dart';
-import '../../../features/skins/presentation/skin_scope.dart';
-import '../../../features/skins/presentation/skin_selector.dart';
 import '../../../core/i18n/error_label.dart';
 import '../../../core/i18n/locale_resolver.dart';
 import '../../../core/i18n/number_formatting.dart';
-import '../../../core/widgets/calculator_keyboard.dart';
-import '../../../core/widgets/seven_segment_display.dart';
+import '../../../core/widgets/spec_breakpoint.dart';
+import '../../../core/widgets/spec_renderer.dart';
+import '../../../features/skins/data/generated/screens.g.dart';
+import '../../../features/skins/presentation/skin_scope.dart';
+import '../../../features/skins/presentation/skin_selector.dart';
 import '../domain/engine/angle_mode.dart';
 import 'viewmodels/calculator_view_model.dart';
 import 'widgets/history_panel.dart';
@@ -83,71 +84,56 @@ class _CalculatorPageState extends State<CalculatorPage> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
+            final String screen = vm.profile.isScientific
+                ? 'scientific'
+                : 'normal';
+            final String breakpoint = SpecBreakpoint.of(constraints.maxWidth);
+            final List<Object?> nodes =
+                screenSpecs[screen]?[breakpoint] ?? const <Object?>[];
+
             return SingleChildScrollView(
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Column(
-                  children: <Widget>[
-                    Padding(
-                      padding: EdgeInsets.all(tokens.screenPadding),
-                      child: SevenSegmentDisplay(
-                        key: const Key('calc.display'),
-                        text: vm.displayText,
-                        tokens: tokens,
-                      ),
+                child: SpecRenderer(
+                  nodes: nodes,
+                  renderContext: SpecRenderContext(
+                    tokens: tokens,
+                    keyboardHeight: tokens.keyboardHeight,
+                    displayText: vm.displayText,
+                    errorLabel: vm.errorKey == null
+                        ? null
+                        : errorLabel(vm.errorKey!, l10n),
+                    rows: vm.profile.keyRows,
+                    labels: _labels(l10n),
+                    onKeyTap: vm.input,
+                    isScientific: vm.profile.isScientific,
+                    angleSelected: vm.angleMode == AngleMode.radians,
+                    onAngleToggle: (_) => vm.setAngleMode(
+                      vm.angleMode == AngleMode.degrees
+                          ? AngleMode.radians
+                          : AngleMode.degrees,
                     ),
-                    if (vm.errorKey != null)
-                      Text(
-                        errorLabel(vm.errorKey!, l10n),
-                        style: const TextStyle(color: Colors.redAccent),
-                      ),
-                    if (vm.profile.isScientific)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            ChoiceChip(
-                              key: const Key('calc.toggle.angle'),
-                              label: Text(
-                                vm.angleMode == AngleMode.degrees
-                                    ? l10n.angleDeg
-                                    : l10n.angleRad,
-                              ),
-                              selected: vm.angleMode == AngleMode.radians,
-                              onSelected: (_) => vm.setAngleMode(
-                                vm.angleMode == AngleMode.degrees
-                                    ? AngleMode.radians
-                                    : AngleMode.degrees,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    SizedBox(
-                      height: tokens.keyboardHeight,
-                      child: Padding(
-                        padding: EdgeInsets.all(tokens.screenPadding),
-                        child: CalculatorKeyboard(
-                          rows: vm.profile.keyRows,
-                          labels: _labels(l10n),
-                          onKeyTap: vm.input,
-                          tokens: tokens,
-                        ),
-                      ),
-                    ),
-                    ExpansionTile(
-                      title: Text(l10n.historyTitle),
-                      children: <Widget>[
-                        HistoryPanel(
-                          entries: vm.history,
-                          separator: separator,
-                          decimalDigits: vm.profile.decimalDigits,
-                        ),
-                      ],
-                    ),
-                    const SkinSelector(),
-                  ],
+                    title: l10n.calculatorTitle,
+                    strings: <String, String>{
+                      'angleDeg': l10n.angleDeg,
+                      'angleRad': l10n.angleRad,
+                      'historyTitle': l10n.historyTitle,
+                    },
+                    historyBuilder: (BuildContext context, String? titleKey) {
+                      return ExpansionTile(
+                        title: Text(l10n.historyTitle),
+                        children: <Widget>[
+                          HistoryPanel(
+                            entries: vm.history,
+                            separator: separator,
+                            decimalDigits: vm.profile.decimalDigits,
+                          ),
+                        ],
+                      );
+                    },
+                    selectorBuilder: (BuildContext context) =>
+                        const SkinSelectorScreen(),
+                  ),
                 ),
               ),
             );

@@ -2,18 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:retro_calculator/l10n/app_localizations.dart';
 
+import '../../../core/widgets/spec_breakpoint.dart';
+import '../../../core/widgets/spec_renderer.dart';
+import '../data/generated/screens.g.dart';
 import '../data/skin_repository.dart';
 import '../domain/skin.dart';
 import 'skin_controller.dart';
+import 'skin_scope.dart';
 
-class SkinSelector extends StatefulWidget {
+/// Compatibilidad: delega en [SkinSelectorScreen], que es el único punto que
+/// carga el catálogo y renderiza el cuerpo del spec.
+class SkinSelector extends StatelessWidget {
   const SkinSelector({super.key});
 
   @override
-  State<SkinSelector> createState() => _SkinSelectorState();
+  Widget build(BuildContext context) => const SkinSelectorScreen();
 }
 
-class _SkinSelectorState extends State<SkinSelector> {
+/// Pantalla compartida de skins: el cuerpo sale de `screenSpecs['selector']`.
+/// Conserva la carga remota del catálogo que antes vivía en `SkinSelector`.
+class SkinSelectorScreen extends StatefulWidget {
+  const SkinSelectorScreen({super.key});
+
+  @override
+  State<SkinSelectorScreen> createState() => _SkinSelectorScreenState();
+}
+
+class _SkinSelectorScreenState extends State<SkinSelectorScreen> {
   @override
   void initState() {
     super.initState();
@@ -24,6 +39,35 @@ class _SkinSelectorState extends State<SkinSelector> {
       );
     });
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations? l10n = AppLocalizations.of(context);
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final String breakpoint = SpecBreakpoint.of(constraints.maxWidth);
+        final List<Object?> nodes =
+            screenSpecs['selector']?[breakpoint] ?? const <Object?>[];
+        return SpecRenderer(
+          nodes: nodes,
+          renderContext: SpecRenderContext(
+            tokens: SkinScope.tokensOf(context),
+            title: l10n?.skinSelectorTitle ?? '',
+            strings: <String, String>{
+              'skinSelectorTitle': l10n?.skinSelectorTitle ?? '',
+            },
+            selectorBuilder: (BuildContext context) =>
+                const _SkinSelectorOptions(),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Hoja de dominio: mantiene las keys heredadas del selector del MVP.
+class _SkinSelectorOptions extends StatelessWidget {
+  const _SkinSelectorOptions();
 
   @override
   Widget build(BuildContext context) {
