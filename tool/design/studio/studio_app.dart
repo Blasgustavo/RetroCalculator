@@ -1,5 +1,6 @@
-// Shell del RetroDesign Studio (T21, plan V4): paleta, canvas, capas,
-// inspector, selector de breakpoint y acciones de publicación.
+// Shell del RetroDesign Studio (T21/T22, plan V4): paleta arrastrable,
+// canvas con destino de drop, capas, inspector, selector de breakpoint y
+// acciones de publicación.
 //
 // Solo widgets del SDK de Flutter: el canvas renderiza con el mismo
 // `SpecRenderer` que la app y aquí no se importa `fluttercanvas`. El shell es
@@ -211,7 +212,28 @@ class _PalettePanel extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 for (final String type in controller.paletteTypes)
-                  ListTile(dense: true, title: Text(type)),
+                  Draggable<String>(
+                    data: type,
+                    feedback: Material(
+                      color: const Color(0xFFFFF3E0),
+                      elevation: 4,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        child: Text(
+                          type,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    childWhenDragging: Opacity(
+                      opacity: 0.4,
+                      child: ListTile(dense: true, title: Text(type)),
+                    ),
+                    child: ListTile(dense: true, title: Text(type)),
+                  ),
               ],
             ),
           ),
@@ -228,17 +250,40 @@ class _CanvasPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFECEFF1),
-        border: Border.all(color: const Color(0xFF90A4AE)),
-      ),
-      child: SingleChildScrollView(
-        child: SpecRenderer(
-          nodes: controller.currentSpec,
-          renderContext: const SpecRenderContext(),
-        ),
-      ),
+    return DragTarget<String>(
+      // Deny-by-default: solo los tipos de la whitelist llegan a `addNode`.
+      onWillAcceptWithDetails: (DragTargetDetails<String> details) =>
+          designNodeTypes.contains(details.data),
+      onAcceptWithDetails: (DragTargetDetails<String> details) =>
+          controller.addNode(details.data),
+      builder:
+          (
+            BuildContext context,
+            List<String?> candidateData,
+            List<dynamic> rejectedData,
+          ) {
+            final bool hovering = candidateData.isNotEmpty;
+            return DecoratedBox(
+              key: const Key('studio.canvas.dropZone'),
+              decoration: BoxDecoration(
+                color: hovering
+                    ? const Color(0xFFCFD8DC)
+                    : const Color(0xFFECEFF1),
+                border: Border.all(
+                  color: hovering
+                      ? const Color(0xFF00695C)
+                      : const Color(0xFF90A4AE),
+                  width: hovering ? 2 : 1,
+                ),
+              ),
+              child: SingleChildScrollView(
+                child: SpecRenderer(
+                  nodes: controller.currentSpec,
+                  renderContext: const SpecRenderContext(),
+                ),
+              ),
+            );
+          },
     );
   }
 }
