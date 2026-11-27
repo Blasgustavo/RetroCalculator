@@ -422,6 +422,9 @@ void _validateDimensions(DesignSeed design, List<ValidationIssue> issues) {
 void _validateProfiles(DesignSeed design, List<ValidationIssue> issues) {
   final Map<String, Set<String>> dependencies = <String, Set<String>>{};
   final Map<String, String> formulaPaths = <String, String>{};
+  final Set<String> allFormulaNames = design.profiles
+      .expand((ProfileSpec p) => p.formulas.keys)
+      .toSet();
   for (int i = 0; i < design.profiles.length; i++) {
     final ProfileSpec profile = design.profiles[i];
     if (!knownCapabilityIds.contains(profile.capabilityId)) {
@@ -442,9 +445,7 @@ void _validateProfiles(DesignSeed design, List<ValidationIssue> issues) {
         expression: formula.value,
         inputs: profile.inputs,
         capability: _capability(profile.capabilityId),
-        formulaNames: design.profiles
-            .expand((ProfileSpec p) => p.formulas.keys)
-            .toSet(),
+        formulaNames: allFormulaNames,
         path: path,
         inputsPath: inputsPath,
         reportedDuplicateCodes: reportedDuplicateCodes,
