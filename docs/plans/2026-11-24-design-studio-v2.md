@@ -348,9 +348,9 @@ Orden de ejecución: **V0 → V1 → V2 → V3 → V4 → V5 → V6 → V7 → V
 
 ### V7 — Publicación y app instalada (T40–T48)
 
-- [ ] **T40 — Paquete.** `tool/design/publish.dart` construye el directorio del canal con manifiesto, assets y versión incrementada.
+- [x] **T40 — Paquete.** `tool/design/publish.dart` construye el directorio del canal con manifiesto, assets y versión incrementada.
 - [ ] **T41 — Firma.** Ed25519 con `cryptography`; clave pública fijada en `lib/platform/catalog/public_key.dart`. La clave privada nunca entra al repo: se lee de un secreto.
-- [ ] **T42 — CLI de publicación.** `dart run tool/design/publish.dart --channel prod` y `--rollback <version>`; imprime versión y checksum.
+- [x] **T42 — CLI de publicación.** `dart run tool/design/publish.dart --channel prod` y `--rollback <version>`; imprime versión y checksum.
 - [ ] **T43 — Hosting estático.** Subida por canal a hosting estático; sin backend stateful. Documentar URL base y permisos.
 - [ ] **T44 — Cliente.** `lib/platform/catalog/catalog_client.dart`: fetch, verifica firma y checksum, valida con las mismas reglas, cachea la última versión buena.
 - [ ] **T45 — Aplicación.** `CatalogController` inyecta tokens, perfiles, imágenes, sonidos y tema de anuncios; usa `SkinScope(tokensOverride:)` y el registro de capacidades.

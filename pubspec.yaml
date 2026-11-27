@@ -53,6 +53,7 @@ dev_dependencies:
   yaml: ^3.1.2
   fluttercanvas: ^0.3.0
   fluttercanvas_core: ^0.3.1
+  cryptography: ^2.7.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
