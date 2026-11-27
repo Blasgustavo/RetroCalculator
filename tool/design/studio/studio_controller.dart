@@ -18,6 +18,16 @@ import 'package:retro_calculator/core/design_system/token_validation.dart'
 import '../artifacts.dart' show designNodeToJson;
 import '../schema.dart';
 import '../validate.dart' show ValidationIssue;
+import 'package:retro_calculator/core/errors/calculator_exception.dart';
+import 'package:retro_calculator/features/calculator/domain/capabilities/basic_capability.dart';
+import 'package:retro_calculator/features/calculator/domain/capabilities/capability.dart';
+import 'package:retro_calculator/features/calculator/domain/capabilities/scientific_capability.dart';
+import 'package:retro_calculator/features/calculator/domain/engine/angle_mode.dart';
+import 'package:retro_calculator/features/calculator/domain/engine/ast.dart';
+import 'package:retro_calculator/features/calculator/domain/engine/evaluator.dart';
+import 'package:retro_calculator/features/calculator/domain/engine/lexer.dart';
+import 'package:retro_calculator/features/calculator/domain/engine/parser.dart';
+import 'package:retro_calculator/features/calculator/domain/engine/token.dart';
 import 'studio_apply.dart' show StudioApplyResult, applyStudioDocument;
 import 'studio_formula_validation.dart';
 import 'studio_geometry.dart';
@@ -943,6 +953,53 @@ class StudioController extends ChangeNotifier {
           .expand((ProfileSpec p) => p.formulas.keys)
           .toSet(),
     );
+  }
+
+  /// Evalúa [expression] con los valores de ejemplo [values] (uno por input) y
+  /// devuelve (value: resultado, error: null) si es finito, o (value: null,
+  /// error: código) si falla. No muta el documento ni valida build-time (T32).
+  ({double? value, String? error}) testProfileFormula(
+    String profileId,
+    String name,
+    String expression,
+    Map<String, num> values,
+  ) {
+    final ProfileSpec? profile = _profile(profileId);
+    if (profile == null) {
+      return (value: null, error: 'perfil desconocido: $profileId');
+    }
+    final CalculatorCapability capability = profile.capabilityId == 'scientific'
+        ? const ScientificCapability()
+        : const BasicCapability();
+    final AngleMode angleMode = profile.defaultAngleMode == 'radians'
+        ? AngleMode.radians
+        : AngleMode.degrees;
+
+    // Normalizar variables como el motor (rechaza colisiones de caso).
+    final Map<String, num> normalized = <String, num>{};
+    for (final MapEntry<String, num> entry in values.entries) {
+      final String key = entry.key.toLowerCase();
+      if (normalized.containsKey(key)) {
+        return (value: null, error: 'duplicateVariable');
+      }
+      normalized[key] = entry.value;
+    }
+
+    try {
+      final List<Token> tokens = const Lexer().tokenize(expression);
+      final ExprNode tree = Parser(tokens, variables: normalized).parse();
+      final double result = Evaluator(
+        capability,
+        angleMode,
+        variables: normalized,
+      ).evaluate(tree);
+      if (!result.isFinite) {
+        return (value: null, error: 'nonFiniteResult');
+      }
+      return (value: result, error: null);
+    } on CalculatorException catch (error) {
+      return (value: null, error: error.message);
+    }
   }
 
   SkinSpec? _skin(String id) {
