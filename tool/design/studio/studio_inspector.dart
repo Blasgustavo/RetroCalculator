@@ -11,6 +11,9 @@ import 'package:retro_calculator/core/design_system/token_validation.dart'
     show colorKeys, contrastRatio, hexColorPattern, minContrastRatio, minValues;
 
 import '../schema.dart' show DesignNode, ProfileSpec;
+import 'package:retro_calculator/features/calculator/domain/capabilities/basic_capability.dart';
+import 'package:retro_calculator/features/calculator/domain/capabilities/capability.dart';
+import 'package:retro_calculator/features/calculator/domain/capabilities/scientific_capability.dart';
 import 'studio_controller.dart'
     show
         StudioController,
@@ -404,6 +407,8 @@ class _FormulaSectionState extends State<_FormulaSection> {
   String? _name;
   late final TextEditingController _text;
   late final FocusNode _focus;
+  double? _testValue;
+  String? _testError;
 
   @override
   void initState() {
@@ -448,6 +453,17 @@ class _FormulaSectionState extends State<_FormulaSection> {
     _text.dispose();
     _focus.dispose();
     super.dispose();
+  }
+
+  List<String> _suggestions(ProfileSpec profile) {
+    final CalculatorCapability capability = profile.capabilityId == 'scientific'
+        ? const ScientificCapability()
+        : const BasicCapability();
+    return <String>[
+      ...profile.inputs,
+      ...capability.functions,
+      ...capability.constants,
+    ];
   }
 
   @override
@@ -523,9 +539,91 @@ class _FormulaSectionState extends State<_FormulaSection> {
               );
             }
             // La validación se recalcula en `build` con el texto actual.
-            setState(() {});
+            setState(() {
+              _testValue = null;
+              _testError = null;
+            });
           },
         ),
+        if (profile != null && effectiveName != null) ...<Widget>[
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: <Widget>[
+              for (final String suggestion in _suggestions(profile))
+                ActionChip(
+                  key: Key('studio.inspector.formulaSuggestion.$suggestion'),
+                  label: Text(suggestion),
+                  onPressed: () {
+                    final int offset = _text.selection.baseOffset < 0
+                        ? _text.text.length
+                        : _text.selection.baseOffset;
+                    final String before = _text.text.substring(0, offset);
+                    final String after = _text.text.substring(offset);
+                    final String inserted =
+                        before.isEmpty ||
+                            before.endsWith(' ') ||
+                            before.endsWith('(') ||
+                            before.endsWith(',') ||
+                            before.endsWith('+') ||
+                            before.endsWith('-') ||
+                            before.endsWith('*') ||
+                            before.endsWith('/') ||
+                            before.endsWith('^') ||
+                            before.endsWith('%')
+                        ? suggestion
+                        : ' $suggestion';
+                    _text.text = '$before$inserted$after';
+                    _text.selection = TextSelection.collapsed(
+                      offset: before.length + inserted.length,
+                    );
+                    widget.controller.setProfileFormula(
+                      profile.id,
+                      effectiveName,
+                      _text.text,
+                    );
+                    setState(() {});
+                  },
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: <Widget>[
+              ElevatedButton(
+                key: const Key('studio.inspector.formulaTest'),
+                onPressed: () {
+                  final Map<String, num> values = <String, num>{
+                    for (final String input in profile.inputs) input: 1,
+                  };
+                  final ({double? value, String? error}) result = widget
+                      .controller
+                      .testProfileFormula(
+                        profile.id,
+                        effectiveName,
+                        _text.text,
+                        values,
+                      );
+                  setState(() {
+                    _testValue = result.value;
+                    _testError = result.error;
+                  });
+                },
+                child: const Text('Probar'),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  key: const Key('studio.inspector.formulaResult'),
+                  _testError != null
+                      ? _testError!
+                      : (_testValue == null ? '' : _testValue.toString()),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
