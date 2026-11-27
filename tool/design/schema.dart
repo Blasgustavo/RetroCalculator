@@ -36,10 +36,6 @@ const double seedMinTouchTarget = minTouchTarget;
 /// Límite de peso para assets locales, sin dependencias nuevas.
 const int maxAssetBytes = 2 * 1024 * 1024;
 
-/// Presupuesto del validador de fórmulas (solo parseo, nunca ejecución).
-const int maxFormulaSteps = 64;
-const int maxFormulaDepth = 32;
-
 class DesignSchemaException implements Exception {
   const DesignSchemaException(this.path, this.reason);
 
