@@ -7,9 +7,10 @@ class CalculatorProfiles {
   const CalculatorProfiles._();
 
   static const CalculatorProfile normal = CalculatorProfile(
-    id: CalculatorProfileId.normal,
+    id: 'normal',
     labelKey: 'modeNormal',
     capability: BasicCapability(),
+    isScientific: false,
     defaultAngleMode: AngleMode.degrees,
     decimalDigits: 8,
     keyRows: <List<String>>[
@@ -22,9 +23,10 @@ class CalculatorProfiles {
   );
 
   static const CalculatorProfile scientific = CalculatorProfile(
-    id: CalculatorProfileId.scientific,
+    id: 'scientific',
     labelKey: 'modeScientific',
     capability: ScientificCapability(),
+    isScientific: true,
     defaultAngleMode: AngleMode.degrees,
     decimalDigits: 10,
     keyRows: <List<String>>[
