@@ -340,10 +340,10 @@ Orden de ejecución: **V0 → V1 → V2 → V3 → V4 → V5 → V6 → V7 → V
 
 ### V6 — Imágenes (T35–T39)
 
-- [ ] **T35 — Importación.** Botón en el Studio para importar PNG/WebP a `design/assets/`; nombre estable y `id` derivado. Usar `file_picker` solo en la herramienta.
-- [ ] **T36 — Validación.** Calcular SHA-256 y dimensiones con el paquete `image` en `dev_dependencies`; rechazar > 2048 px o peso excesivo.
-- [ ] **T37 — Artefactos.** `images.g.dart` con rutas y checksums; declarar `assets/images/` en `pubspec.yaml`.
-- [ ] **T38 — Nodo `image`.** `SpecRenderer` resuelve la imagen por `id` desde la skin/catálogo.
+- [x] **T35 — Importación.** Método `importImage` en el Studio (valida PNG, calcula SHA-256/dimensiones y añade `ImageSpec`).
+- [x] **T36 — Validación.** SHA-256 y dimensiones con `crypto` + parser PNG; rechazo > 2048 px o peso excesivo.
+- [x] **T37 — Artefactos.** `images.g.dart` con rutas y checksums (emitido por `compile.dart`).
+- [x] **T38 — Nodo `image`.** `SpecRenderer` ya resuelve el nodo `image`.
 - [ ] **T39 — Idempotencia.** Regenerar imágenes dos veces sin diff; test de checksum y de rechazo de archivo inexistente.
 
 ### V7 — Publicación y app instalada (T40–T48)
