@@ -335,7 +335,7 @@ Orden de ejecución: **V0 → V1 → V2 → V3 → V4 → V5 → V6 → V7 → V
 - [x] **T30 — Evaluador.** `evaluate(String expression, {Map<String, num> variables})` con presupuesto de pasos y profundidad máxima.
 - [x] **T31 — Tests del motor.** `2+3=5` sigue igual; `base*(1+tasa/100)` con `base=100, tasa=18` da 118; variable no declarada falla con `unknownVariable`.
 - [x] **T32 — Editor de fórmulas.** Autocompletado de `inputs` y funciones permitidas; botón «Probar» con valores de ejemplo.
-- [ ] **T33 — Validación build-time.** El compiler parsea todas las fórmulas y rechaza las inválidas antes de emitir artefactos.
+- [x] **T33 - Validación build-time.** El compiler parsea todas las fórmulas y rechaza las inválidas antes de emitir artefactos.
 - [ ] **T34 — Validación runtime.** Al aplicar un catálogo, una fórmula inválida se descarta y se conserva el perfil anterior; nunca bloquea la calculación normal.
 
 ### V6 — Imágenes (T35–T39)
