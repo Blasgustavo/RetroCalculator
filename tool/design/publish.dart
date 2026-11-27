@@ -40,7 +40,9 @@ void main(List<String> args) async {
   if (assetsDir.existsSync()) {
     for (final FileSystemEntity entity in assetsDir.listSync()) {
       if (entity is File) {
-        entity.copySync('${outDir.path}/${entity.path.split(Platform.pathSeparator).last}');
+        entity.copySync(
+          '${outDir.path}/${entity.path.split(Platform.pathSeparator).last}',
+        );
       }
     }
   }
