@@ -39,28 +39,38 @@ FormulaValidation validateFormula({
   required Set<String> constants,
 }) {
   if (expression.trim().isEmpty) {
-    return const FormulaValidation(<FormulaIssue>[
-      FormulaIssue('emptyFormula', 'fórmula vacía'),
-    ], <String>{});
+    return FormulaValidation(
+      List<FormulaIssue>.unmodifiable(<FormulaIssue>[
+        const FormulaIssue('emptyFormula', 'fórmula vacía'),
+      ]),
+      const <String>{},
+    );
   }
   if (expression.length > maxFormulaLength) {
-    return const FormulaValidation(<FormulaIssue>[
-      FormulaIssue('formulaTooLong', 'fórmula demasiado larga'),
-    ], <String>{});
+    return FormulaValidation(
+      List<FormulaIssue>.unmodifiable(<FormulaIssue>[
+        const FormulaIssue('formulaTooLong', 'fórmula demasiado larga'),
+      ]),
+      const <String>{},
+    );
   }
 
   final List<FormulaIssue> issues = <FormulaIssue>[];
   final Set<String> declared = <String>{};
+  String? duplicateInput;
   for (final String input in inputs) {
     final String normalized = input.toLowerCase();
     if (!declared.add(normalized)) {
-      issues.add(
-        FormulaIssue(
-          'duplicateVariable',
-          'variable declarada dos veces: $input (duplicateVariable)',
-        ),
-      );
+      duplicateInput ??= input;
     }
+  }
+  if (duplicateInput != null) {
+    issues.add(
+      FormulaIssue(
+        'duplicateVariable',
+        'variable declarada dos veces: $duplicateInput (duplicateVariable)',
+      ),
+    );
   }
   if (issues.isNotEmpty) {
     return FormulaValidation(
@@ -82,9 +92,12 @@ FormulaValidation validateFormula({
     final String message = error.message == 'maxDepthExceeded'
         ? 'fórmula demasiado profunda'
         : 'fórmula con sintaxis inválida (${error.message})';
-    return FormulaValidation(<FormulaIssue>[
-      FormulaIssue(error.message, message),
-    ], const <String>{});
+    return FormulaValidation(
+      List<FormulaIssue>.unmodifiable(<FormulaIssue>[
+        FormulaIssue(error.message, message),
+      ]),
+      const <String>{},
+    );
   }
 
   final _FormulaWalker walker = _FormulaWalker(
@@ -105,10 +118,12 @@ class _FormulaWalker {
   _FormulaWalker({
     required this.name,
     required this.declared,
-    required this.formulaNames,
+    required Set<String> formulaNames,
     required this.functions,
     required this.constants,
-  });
+  }) : formulaNames = formulaNames
+           .map((String value) => value.toLowerCase())
+           .toSet();
 
   final String name;
   final Set<String> declared;
@@ -159,6 +174,7 @@ class _FormulaWalker {
             ),
           );
         }
+        break;
       case ConstantNode():
         _checkConstant(node.name);
       case FunctionNode():
