@@ -12,6 +12,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart' show Size;
+import 'package:crypto/crypto.dart' show sha256;
 import 'package:retro_calculator/core/design_system/token_validation.dart'
     show colorKeys, minValues, minTouchTarget, validateTokens;
 
@@ -955,6 +956,86 @@ class StudioController extends ChangeNotifier {
     );
   }
 
+  /// Importa una imagen PNG desde [filePath]: valida existencia, tamaño,
+  /// dimensiones y checksum, y la añade al documento. Devuelve null si tuvo
+  /// éxito o un mensaje de error legible (T35/T36).
+  String? importImage(
+    String filePath, {
+    int maxWidth = 2048,
+    int maxHeight = 2048,
+    int maxBytes = 1024 * 1024,
+  }) {
+    final File file = File(filePath);
+    if (!file.existsSync()) {
+      return 'archivo no existe: $filePath';
+    }
+    final List<int> bytes = file.readAsBytesSync();
+    if (bytes.length > maxBytes) {
+      return 'excede $maxBytes bytes';
+    }
+    final ({int width, int height})? size = _pngSize(bytes);
+    if (size == null) {
+      return 'no es un PNG válido';
+    }
+    if (size.width > maxWidth || size.height > maxHeight) {
+      return 'dimensiones ${size.width}x${size.height} exceden '
+          '$maxWidth x $maxHeight';
+    }
+    final String checksum = sha256.convert(bytes).toString();
+    final String baseName = filePath.split(RegExp(r'[/\\]')).last;
+    final String id = baseName
+        .replaceAll(RegExp(r'\.[^.]+$'), '')
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9_]'), '_');
+    if (_document.images.any((ImageSpec image) => image.id == id)) {
+      return 'id de imagen duplicado: $id';
+    }
+    final List<ImageSpec> images = List<ImageSpec>.from(_document.images);
+    images.add(
+      ImageSpec(
+        id: id,
+        file: baseName,
+        format: 'png',
+        maxWidth: maxWidth,
+        maxHeight: maxHeight,
+        checksum: checksum,
+      ),
+    );
+    _recordMutation();
+    _document = _documentWith(images: images);
+    notifyListeners();
+    return null;
+  }
+
+  ({int width, int height})? _pngSize(List<int> bytes) {
+    const List<int> signature = <int>[
+      0x89,
+      0x50,
+      0x4e,
+      0x47,
+      0x0d,
+      0x0a,
+      0x1a,
+      0x0a,
+    ];
+    if (bytes.length < 24) return null;
+    for (int i = 0; i < signature.length; i++) {
+      if (bytes[i] != signature[i]) return null;
+    }
+    if (bytes[12] != 0x49 ||
+        bytes[13] != 0x48 ||
+        bytes[14] != 0x44 ||
+        bytes[15] != 0x52) {
+      return null;
+    }
+    final int width =
+        (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+    final int height =
+        (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+    if (width <= 0 || height <= 0) return null;
+    return (width: width, height: height);
+  }
+
   /// Evalúa [expression] con los valores de ejemplo [values] (uno por input) y
   /// devuelve (value: resultado, error: null) si es finito, o (value: null,
   /// error: código) si falla. No muta el documento ni valida build-time (T32).
@@ -1019,6 +1100,7 @@ class StudioController extends ChangeNotifier {
   DesignSeed _documentWith({
     List<SkinSpec>? skins,
     List<ProfileSpec>? profiles,
+    List<ImageSpec>? images,
     Map<String, Map<String, List<DesignNode>>>? screens,
   }) {
     return DesignSeed(
@@ -1026,7 +1108,7 @@ class StudioController extends ChangeNotifier {
       version: _document.version,
       channels: _document.channels,
       skins: skins ?? _document.skins,
-      images: _document.images,
+      images: images ?? _document.images,
       screens: screens ?? _document.screens,
       profiles: profiles ?? _document.profiles,
       dimensions: _document.dimensions,
