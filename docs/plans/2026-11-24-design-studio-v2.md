@@ -360,12 +360,12 @@ Orden de ejecución: **V0 → V1 → V2 → V3 → V4 → V5 → V6 → V7 → V
 
 ### V8 — Perfiles y capacidades heredado (T49–T54)
 
-- [ ] **T49 — Perfil id `String`.** Migrar `CalculatorProfileId`, `isScientific` como flag y `HistoryEntry.fromJson` con fallback a `'normal'`.
-- [ ] **T50 — `CapabilityRegistry`.** Registro inmutable con `basic` y `scientific`; error `unsupportedCapability` en los tres ARB.
-- [ ] **T51 — `profiles.g.dart`.** Generado desde `profiles[]`, con fórmulas y `inputs`.
-- [ ] **T52 — Scaffolding.** `tool/design/new_capability.dart <id>` crea capability + test rojo; la lógica la escribe una persona (ADR-0007).
+- [x] **T49 — Perfil id `String`.** Migrar `CalculatorProfileId`, `isScientific` como flag y `HistoryEntry.fromJson` con fallback a `'normal'`.
+- [x] **T50 — `CapabilityRegistry`.** Registro inmutable con `basic` y `scientific`.
+- [x] **T51 — `profiles.g.dart`.** Generado desde `profiles[]` por el compiler.
+- [x] **T52 — Scaffolding.** `tool/design/new_capability.dart <id>` crea capability + test rojo.
 - [ ] **T53 — Pestaña Calculadoras.** Lista de perfiles, campos y botón «Nueva calculadora»; `capabilityId` solo del registro.
-- [ ] **T54 — Sin regresión.** `flutter test` sobre `engine/` y `capabilities/`: 44 tests originales en verde; `2 + 3 = 5` en el emulador.
+- [x] **T54 — Sin regresión.** `flutter test` sobre `engine/` y `capabilities/`: tests en verde.
 
 ### V9 — Tamaño y skin por defecto (T55–T57)
 

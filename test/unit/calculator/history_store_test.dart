@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:retro_calculator/features/calculator/data/local/history_store.dart';
 import 'package:retro_calculator/features/calculator/data/local/in_memory_history_store.dart';
 import 'package:retro_calculator/features/calculator/data/models/history_entry.dart';
-import 'package:retro_calculator/features/calculator/domain/profiles/calculator_profile.dart';
 
 void main() {
   test('conserva como máximo 50 entradas y la última va primero', () async {
@@ -12,7 +11,7 @@ void main() {
         HistoryEntry(
           expression: '$i',
           result: i.toDouble(),
-          profileId: CalculatorProfileId.normal,
+          profileId: 'normal',
           timestamp: DateTime(2026, 11, 24, 0, i),
         ),
       );

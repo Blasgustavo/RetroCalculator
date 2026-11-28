@@ -3,7 +3,6 @@ import 'package:retro_calculator/l10n/app_localizations.dart';
 
 import '../../../../core/i18n/number_formatting.dart';
 import '../../data/models/history_entry.dart';
-import '../../domain/profiles/calculator_profile.dart';
 
 class HistoryPanel extends StatelessWidget {
   const HistoryPanel({
@@ -29,7 +28,7 @@ class HistoryPanel extends StatelessWidget {
       itemCount: entries.length,
       itemBuilder: (BuildContext context, int index) {
         final HistoryEntry entry = entries[index];
-        final String label = entry.profileId == CalculatorProfileId.scientific
+        final String label = entry.profileId == 'scientific'
             ? l10n.modeScientific
             : l10n.modeNormal;
         return ListTile(

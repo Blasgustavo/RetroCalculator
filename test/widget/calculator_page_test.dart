@@ -89,7 +89,7 @@ void main() {
       '5',
     );
     expect(vm.history, hasLength(1));
-    expect(vm.history.single.profileId.name, 'scientific');
+    expect(vm.history.single.profileId, 'scientific');
     expect((await store.load()).single.result, 5);
 
     await tester.tap(find.byKey(const Key('calc.toggle.mode')));
