@@ -1,15 +1,15 @@
 // Publicación del catálogo del RetroDesign Studio (V7).
 //
 // Construye el directorio del canal con manifiesto, assets y versión
-// incrementada. La firma Ed25519 se calcula si existe la clave privada en el
-// entorno (CATALOG_PRIVATE_KEY); en caso contrario se deja vacía y se advierte.
+// incrementada. Firma Ed25519 si existe CATALOG_PRIVATE_KEY en el entorno.
 
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart' show sha256;
+import 'package:cryptography/cryptography.dart';
 
-void main(List<String> args) async {
+Future<void> main(List<String> args) async {
   String channel = 'prod';
   int? rollback;
   for (int i = 0; i < args.length; i++) {
@@ -35,7 +35,6 @@ void main(List<String> args) async {
   if (outDir.existsSync()) outDir.deleteSync(recursive: true);
   outDir.createSync(recursive: true);
 
-  // Copiar assets.
   final Directory assetsDir = Directory('design/assets');
   if (assetsDir.existsSync()) {
     for (final FileSystemEntity entity in assetsDir.listSync()) {
@@ -47,13 +46,44 @@ void main(List<String> args) async {
     }
   }
 
+  final String payload = jsonEncode(design);
+  final String checksum = sha256.convert(utf8.encode(payload)).toString();
+
+  String signature = '';
+  final String? privateKeyHex = Platform.environment['CATALOG_PRIVATE_KEY'];
+  if (privateKeyHex != null && privateKeyHex.isNotEmpty) {
+    try {
+      final List<int> seed = _hexToBytes(privateKeyHex);
+      final algorithm = Ed25519();
+      final keyPair = await algorithm.newKeyPairFromSeed(seed);
+      final sig = await algorithm.sign(utf8.encode(payload), keyPair: keyPair);
+      signature = sig.bytes
+          .map((int b) => b.toRadixString(16).padLeft(2, '0'))
+          .join();
+      stdout.writeln('Firma calculada con Ed25519.');
+    } catch (error) {
+      stderr.writeln('No se pudo firmar: $error');
+    }
+  } else {
+    stderr.writeln('CATALOG_PRIVATE_KEY no definida: manifiesto sin firma.');
+  }
+
   final String manifest = jsonEncode(<String, Object?>{
     'version': nextVersion,
     'channel': channel,
     'definition': 'design/app.design.json',
-    'checksum': sha256.convert(utf8.encode(jsonEncode(design))).toString(),
+    'checksum': checksum,
+    'signature': signature,
   });
 
   File('${outDir.path}/manifest.json').writeAsStringSync(manifest);
   stdout.writeln('Publicado $channel v$nextVersion en ${outDir.path}');
+}
+
+List<int> _hexToBytes(String hex) {
+  final List<int> bytes = <int>[];
+  for (int i = 0; i < hex.length; i += 2) {
+    bytes.add(int.parse(hex.substring(i, i + 2), radix: 16));
+  }
+  return bytes;
 }
